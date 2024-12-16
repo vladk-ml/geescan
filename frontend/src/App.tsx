@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
 import { Box, AppBar, Toolbar, Typography, Container } from '@mui/material';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -18,6 +19,8 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 function App() {
   const position: [number, number] = [51.505, -0.09];
+  const mapRef = React.useRef<L.Map | null>(null);
+  const drawnItemsRef = React.useRef<L.FeatureGroup | null>(null);
 
   const handleCreated = (e: any) => {
     const layer = e.layer;
@@ -25,40 +28,65 @@ function App() {
   };
 
   React.useEffect(() => {
-    const map = L.map('map').setView(position, 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
+    if (!mapRef.current) {
+      const map = L.map('map').setView(position, 13);
+      mapRef.current = map;
 
-    // Initialize FeatureGroup for the draw control
-    const drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
 
-    // Initialize draw control
-    const drawControl = new L.Control.Draw({
-      draw: {
-        marker: false,
-        circle: false,
-        circlemarker: false,
-        polyline: false,
-        polygon: true,
-        rectangle: true
-      },
-      edit: {
-        featureGroup: drawnItems
-      }
-    });
-    map.addControl(drawControl);
+      // Initialize FeatureGroup for the draw control
+      const drawnItems = new L.FeatureGroup();
+      drawnItemsRef.current = drawnItems;
+      map.addLayer(drawnItems);
 
-    // Handle created features
-    map.on(L.Draw.Event.CREATED, (e: any) => {
-      const layer = e.layer;
-      drawnItems.addLayer(layer);
-      handleCreated(e);
-    });
+      // Initialize draw control
+      const drawControl = new (L.Control as any).Draw({
+        position: 'topright',
+        draw: {
+          marker: false,
+          circle: false,
+          circlemarker: false,
+          polyline: false,
+          polygon: {
+            allowIntersection: false,
+            showArea: true,
+            drawError: {
+              color: '#e1e100',
+              message: '<strong>Oh snap!<strong> you can\'t draw that!'
+            },
+            shapeOptions: {
+              color: '#3388ff'
+            }
+          },
+          rectangle: {
+            shapeOptions: {
+              color: '#3388ff'
+            }
+          }
+        },
+        edit: {
+          featureGroup: drawnItems,
+          remove: true
+        }
+      });
+
+      map.addControl(drawControl);
+
+      // Handle created features
+      map.on(L.Draw.Event.CREATED, (e: any) => {
+        const layer = e.layer;
+        drawnItems.addLayer(layer);
+        handleCreated(e);
+      });
+    }
 
     return () => {
-      map.remove();
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
     };
   }, []);
 
