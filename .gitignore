@@ -57,3 +57,13 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Google Earth Engine credentials
+*credentials*.json
+.config/earthengine/
+private_key.json
+service-account.json
+
+# Explicitly track these files
+!*.geojson
+!aois/*.geojson
