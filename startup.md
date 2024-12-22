@@ -1,23 +1,24 @@
 # GEEScan Project Setup
 
-## Backend Setup
+Start in the `geescan` directory.
 
-1. Create a virtual environment and activate it:
+## First Time Setup
+
+1. Initialize Docker containers (will preserve any existing containers):
+```bash
+.\init_containers.bat
+```
+
+2. Create a virtual environment and activate it:
 ```bash
 cd backend
 python -m venv venv
 .\venv\Scripts\activate
 ```
 
-2. Install the required packages:
+3. Install the required packages:
 ```bash
 pip install Flask Flask-SQLAlchemy Flask-Migrate Flask-CORS python-dotenv GeoAlchemy2 psycopg2-binary earthengine-api
-```
-
-3. Set up the environment variables in `.env`:
-```
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/geescan
-GOOGLE_APPLICATION_CREDENTIALS=path/to/your/credentials.json
 ```
 
 4. Initialize the database:
@@ -27,23 +28,31 @@ flask db migrate
 flask db upgrade
 ```
 
-5. Start the Flask development server:
-```bash
-python run.py
-```
-
-## Frontend Setup
-
-1. Install dependencies:
+5. Install frontend dependencies:
 ```bash
 cd frontend
+# Use --legacy-peer-deps to handle Material-UI version conflicts
 npm install --legacy-peer-deps
 ```
 
-2. Start the development server:
+## Daily Development
+
+### Starting the Application
 ```bash
-npm start
+.\start_app.bat
 ```
+This will:
+- Start Docker containers
+- Start the Flask backend
+- Start the React frontend
+
+### Stopping the Application
+```bash
+.\clear_ports.bat
+```
+This will:
+- Stop Docker containers (preserves data)
+- Clear any processes on ports 3000 and 5000
 
 ## Development Notes
 
@@ -59,6 +68,13 @@ npm start
 - Frontend runs on http://localhost:3000
 
 ### Environment Setup
-- Make sure PostgreSQL and PostGIS are installed
-- Ensure Google Earth Engine credentials are properly configured
+- Make sure Docker Desktop is running
 - Node.js and npm should be installed for frontend development
+
+### Common Issues
+1. If you see `'react-scripts' is not recognized` or other npm-related errors:
+   ```bash
+   cd frontend
+   # Clean install with legacy peer deps flag
+   npm install --legacy-peer-deps
+   ```

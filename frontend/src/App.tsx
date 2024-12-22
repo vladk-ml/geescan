@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapContainer, TileLayer, FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
+import * as turf from '@turf/turf';
 import { 
   Box, 
   AppBar, 
@@ -32,12 +33,15 @@ import {
   Refresh as RefreshIcon,
   Map as MapIcon
 } from '@mui/icons-material';
-import * as turf from '@turf/turf';
+
+// Import Leaflet CSS
 import 'leaflet/dist/leaflet.css';
-import 'leaflet-draw';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+// Import Leaflet Draw
+import 'leaflet-draw';
 
 // Fix Leaflet's default icon issue
 let DefaultIcon = L.icon({
