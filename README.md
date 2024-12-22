@@ -6,62 +6,90 @@ A robust system for monitoring SAR data from Google Earth Engine, with support f
 
 - Python 3.9+
 - Node.js 18+
-- Docker and Docker Compose
+- Docker Desktop
 - PostgreSQL 14+ with PostGIS extension
-- Google Earth Engine account
-- Google Cloud Platform account
+- Google Earth Engine account with authentication set up
 
-## Quick Start
+## First Time Setup
 
-1. Clone the repository:
+1. Clone the repository and navigate to it:
    ```bash
    git clone https://github.com/yourusername/geescan.git
    cd geescan
    ```
 
-2. Set up Python virtual environment:
+2. Run the initialization script:
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
+   .\init_containers.bat
    ```
+   This will set up the required Docker containers for PostgreSQL and PGAdmin.
 
-3. Set up environment variables:
+3. Run the startup script:
    ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
+   .\start_app.bat
    ```
+   The first run will:
+   - Create and activate Python virtual environment
+   - Install Python dependencies
+   - Initialize the database
+   - Install frontend dependencies
+   - Start all services
 
-4. Start the development environment:
-   ```bash
-   docker-compose up -d  # Starts PostgreSQL and other services
-   python backend/run.py  # Starts the Flask backend
-   cd frontend && npm start  # Starts the React frontend
-   ```
+## Daily Usage
+
+### Starting the Application
+```bash
+.\start_app.bat
+```
+This will:
+- Start Docker containers
+- Start the Flask backend (http://localhost:5000)
+- Start the React frontend (port shown in terminal)
+
+### Stopping the Application
+```bash
+.\clear_ports.bat
+```
+This will:
+- Stop Docker containers (preserves data)
+- Clear any processes on ports 3000 and 5000
 
 ## Project Structure
 
 ```
 geescan/
-├── backend/
-│   ├── api/            # API endpoints
-│   ├── models/         # Database models
-│   ├── services/       # Business logic
-│   └── utils/          # Utility functions
-├── frontend/
-│   ├── src/
-│   │   ├── components/ # React components
-│   │   ├── pages/      # Page components
-│   │   └── services/   # API services
-│   └── public/         # Static files
-└── docker/             # Docker configuration
+├── backend/           # Flask backend
+│   ├── app/          # Application code
+│   │   ├── api/      # API endpoints
+│   │   └── models/   # Database models
+│   └── venv/         # Python virtual environment
+├── frontend/         # React frontend
+│   └── src/         # Source code
+└── scripts/         # Utility scripts
+    ├── init_containers.bat  # First-time container setup
+    ├── start_app.bat       # Start the application
+    └── clear_ports.bat     # Stop the application
 ```
 
 ## Development
 
 - Backend API: http://localhost:5000
-- Frontend: http://localhost:3000
-- API Documentation: http://localhost:5000/api/docs
+- Frontend: Port shown in React terminal
+- PostgreSQL: localhost:5432
+- PGAdmin: http://localhost:5050
+
+## Common Issues
+
+1. If you see `'react-scripts' is not recognized` or other npm-related errors:
+   ```bash
+   cd frontend
+   npm install --legacy-peer-deps
+   ```
+
+2. If ports are already in use:
+   ```bash
+   .\clear_ports.bat
+   ```
 
 ## Contributing
 
@@ -71,4 +99,4 @@ geescan/
 
 ## License
 
-[Your chosen license]
+MIT License

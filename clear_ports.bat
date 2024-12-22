@@ -30,5 +30,15 @@ for /f "tokens=5" %%a in ('netstat -aon ^| find ":5000" ^| find "LISTENING"') do
     )
 )
 
+:: Extra check for Node processes that might be hanging
+tasklist /FI "IMAGENAME eq node.exe" /FO CSV | find /I "node.exe" > nul
+if %ERRORLEVEL% EQU 0 (
+    echo Cleaning up any remaining Node processes...
+    taskkill /F /IM node.exe /T
+)
+
+:: Wait a bit to ensure ports are fully released
+timeout /t 5
+
 echo.
 echo Application stopped! All ports cleared. Docker containers are preserved.
