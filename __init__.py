@@ -1,3 +1,0 @@
-"""
-SAR AOI Manager package.
-"""

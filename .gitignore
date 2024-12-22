@@ -1,69 +1,42 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+frontend/node_modules
+frontend/.pnp
+frontend/.pnp.js
+
+# testing
+/coverage
+frontend/coverage
+
+# production
+/build
+frontend/build
+
+# misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
 venv/
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Qt
-*.pro.user
-*.pro.user.*
-*.qbs.user
-*.qbs.user.*
-*.moc
-moc_*.cpp
-qrc_*.cpp
-ui_*.h
-Makefile*
-*build-*
-*.qm
-.qmake.stash
-
-# IDEs
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Project specific
-*.log
 .env
-.env.*
-!.env.example
-
-# Google Earth Engine credentials
-*credentials*.json
-.config/earthengine/
-private_key.json
-service-account.json
-
-# Explicitly track these files
-!*.geojson
-!aois/*.geojson
