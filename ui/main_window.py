@@ -38,8 +38,8 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         
-        # Set minimum window size
-        self.setMinimumSize(QSize(1200, 800))
+        # Customize the UI after loading
+        self.customize_ui()
         
         # Create and add the map viewer
         self.setup_map_viewer()
@@ -52,7 +52,88 @@ class MainWindow(QMainWindow):
         
         # Initialize state
         self.current_aoi = None
+
+    def customize_ui(self):
+        """Customize the UI after it's loaded from the .ui file."""
+        # Set minimum window size
+        self.setMinimumSize(1200, 800)
         
+        # Configure the splitter for three equal panes
+        self.ui.main_splitter.setHandleWidth(2)
+        self.ui.main_splitter.setChildrenCollapsible(False)
+        self.ui.main_splitter.setSizes([1000, 1000, 1000])
+        
+        # Style the buttons
+        for button in [self.ui.add_aoi_button, self.ui.import_aoi_button, self.ui.delete_aoi_button]:
+            button.setFixedSize(80, 30)
+        
+        # Center the buttons in their container
+        if hasattr(self.ui, 'aoi_buttons'):
+            self.ui.aoi_buttons.insertStretch(0)
+            self.ui.aoi_buttons.addStretch()
+        
+        # Apply dark mode styling
+        self.setStyleSheet("""
+            QMainWindow, QWidget {
+                background-color: #1e1e1e;
+                color: #ffffff;
+            }
+            QSplitter::handle {
+                background-color: #2d2d2d;
+            }
+            QListWidget {
+                background-color: #252526;
+                border: 1px solid #3e3e42;
+                border-radius: 4px;
+            }
+            QListWidget::item {
+                padding: 4px;
+            }
+            QListWidget::item:selected {
+                background-color: #0e639c;
+            }
+            QPushButton {
+                background-color: #0e639c;
+                border: none;
+                border-radius: 4px;
+                padding: 6px 12px;
+                color: white;
+            }
+            QPushButton:hover {
+                background-color: #1177bb;
+            }
+            QPushButton:pressed {
+                background-color: #0d5289;
+            }
+            QLineEdit, QComboBox, QDateEdit {
+                background-color: #3c3c3c;
+                border: 1px solid #3e3e42;
+                border-radius: 4px;
+                padding: 4px;
+                color: white;
+            }
+            QGroupBox {
+                border: 1px solid #3e3e42;
+                border-radius: 3px;
+                margin-top: 0.5em;
+                padding-top: 0.5em;
+            }
+            QGroupBox::title {
+                color: #ffffff;
+            }
+        """)
+
+    def setup_map_viewer(self):
+        """Set up the map viewer widget."""
+        self.map_viewer = MapViewer(self)
+        self.ui.map_container.layout().addWidget(self.map_viewer)
+        
+        # Set up web channel for map communication
+        self.channel = QWebChannel(self.map_viewer.page())
+        self.handler = WebChannelHandler(self)
+        self.channel.registerObject('callback', self.handler)
+        self.map_viewer.page().setWebChannel(self.channel)
+    
     def setup_right_panel(self):
         """Set up the right panel with SAR parameters."""
         # Create right panel widget
@@ -98,19 +179,40 @@ class MainWindow(QMainWindow):
         count_layout.addWidget(self.image_count)
         right_layout.addWidget(count_widget)
         
-        # Buttons section
+        # Buttons section with centered, fixed-width buttons
         buttons_widget = QWidget()
         buttons_layout = QVBoxLayout(buttons_widget)
+        buttons_layout.setSpacing(6)
         
-        # Query button
+        # Container for Query button
+        query_container = QWidget()
+        query_layout = QHBoxLayout(query_container)
+        query_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Add stretches to center the button
+        query_layout.addStretch()
         self.query_button = QPushButton("Query Images")
+        self.query_button.setFixedSize(120, 30)  # Slightly wider for longer text
         self.query_button.clicked.connect(self.on_query_images)
-        buttons_layout.addWidget(self.query_button)
+        query_layout.addWidget(self.query_button)
+        query_layout.addStretch()
         
-        # Export button
+        buttons_layout.addWidget(query_container)
+        
+        # Container for Export button
+        export_container = QWidget()
+        export_layout = QHBoxLayout(export_container)
+        export_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Add stretches to center the button
+        export_layout.addStretch()
         self.export_button = QPushButton("Export to GeoTIFF")
+        self.export_button.setFixedSize(120, 30)  # Slightly wider for longer text
         self.export_button.clicked.connect(self.on_export)
-        buttons_layout.addWidget(self.export_button)
+        export_layout.addWidget(self.export_button)
+        export_layout.addStretch()
+        
+        buttons_layout.addWidget(export_container)
         
         right_layout.addWidget(buttons_widget)
         
@@ -119,17 +221,6 @@ class MainWindow(QMainWindow):
         
         # Add stretch to push everything to the top
         self.ui.right_panel.layout().addStretch()
-    
-    def setup_map_viewer(self):
-        """Set up the map viewer widget."""
-        self.map_viewer = MapViewer(self)
-        self.ui.map_container.layout().addWidget(self.map_viewer)
-        
-        # Set up web channel for map communication
-        self.channel = QWebChannel(self.map_viewer.page())
-        self.handler = WebChannelHandler(self)
-        self.channel.registerObject('callback', self.handler)
-        self.map_viewer.page().setWebChannel(self.channel)
     
     def setup_connections(self):
         """Connect UI signals to slots."""
