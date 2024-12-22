@@ -207,7 +207,7 @@ class MainWindow(QMainWindow):
         # Add stretches to center the button
         export_layout.addStretch()
         self.export_button = QPushButton("Export to GeoTIFF")
-        self.export_button.setFixedSize(120, 30)  # Slightly wider for longer text
+        self.export_button.setFixedSize(160, 30)  # Increased width to 160px for longer text
         self.export_button.clicked.connect(self.on_export)
         export_layout.addWidget(self.export_button)
         export_layout.addStretch()
