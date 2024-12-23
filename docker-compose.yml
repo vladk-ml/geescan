@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  postgres:
+  postgres:  # Your existing PostgreSQL service
     image: postgis/postgis:14-3.3
     environment:
       POSTGRES_USER: geescan
@@ -11,8 +11,9 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./backend/app/schema.sql:/docker-entrypoint-initdb.d/init.sql  # Mount your schema
 
-  pgadmin:
+  pgadmin:  # Your existing pgAdmin service
     image: dpage/pgadmin4
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@geescan.com
