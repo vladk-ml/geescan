@@ -9,34 +9,54 @@ def get_db_connection():
     conn = None
     try:
         conn = psycopg2.connect(
-            host=os.environ.get("DB_HOST"),  # Connect to localhost
-            port=os.environ.get("DB_PORT"),      # Port exposed in docker-compose.yml
+            host=os.environ.get("DB_HOST"),
+            port=os.environ.get("DB_PORT"),
             database=os.environ.get("DB_NAME"),
             user=os.environ.get("DB_USER"),
             password=os.environ.get("DB_PASSWORD")
         )
+        print("Database connection successful") # Debugging
     except psycopg2.Error as e:
         print(f"Error connecting to database: {e}")
+    finally:
+        if conn is not None:
+            print("Connection is not none, testing fetch")
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT * FROM aois")
+                    result = cur.fetchall()
+                    print(result)
+                    print("Connection test: OK")
+            except:
+                print("Failed test fetch")
     return conn
 
-def create_aoi(name, geometry):
-    """Inserts a new AOI into the database."""
-    conn = get_db_connection()
-    if conn is not None:
-        try:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO aois (name, geometry) VALUES (%s, ST_GeogFromText(%s)) RETURNING id",
-                    (name, geometry)
-                )
-                aoi_id = cur.fetchone()[0]
-                conn.commit()
-                return aoi_id
-        except psycopg2.Error as e:
-            print(f"Error creating AOI: {e}")
-            return None
-        finally:
-            conn.close()
+def get_db_connection():
+    """Establishes a connection to the PostgreSQL database."""
+    conn = None
+    try:
+        conn = psycopg2.connect(
+            host=os.environ.get("DB_HOST"),
+            port=os.environ.get("DB_PORT"),
+            database=os.environ.get("DB_NAME"),
+            user=os.environ.get("DB_USER"),
+            password=os.environ.get("DB_PASSWORD")
+        )
+        print("Database connection successful") # Debugging
+    except psycopg2.Error as e:
+        print(f"Error connecting to database: {e}")
+    finally:
+        if conn is not None:
+            print("Connection is not none, testing fetch")
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT * FROM aois")
+                    result = cur.fetchall()
+                    print(result)
+                    print("Connection test: OK")
+            except:
+                print("Failed test fetch")
+    return conn
 
 def get_aois():
     """Retrieves all AOIs from the database."""
