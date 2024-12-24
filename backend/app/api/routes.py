@@ -12,13 +12,18 @@ def test_create_aoi():
     test_name = 'Test AOI'
     test_geometry = 'SRID=4326;POLYGON((-74.0060 40.7128, -74.0065 40.7128, -74.0065 40.7123, -74.0060 40.7123, -74.0060 40.7128))'
 
+    print(f"Attempting to create test AOI with name: {test_name} and geometry: {test_geometry}")
+
     try:
         new_aoi_id = create_aoi(test_name, test_geometry)
         if new_aoi_id:
+            print(f"Test AOI created successfully with ID: {new_aoi_id}")
             return jsonify({'message': 'Test AOI created successfully', 'id': new_aoi_id}), 201
         else:
+            print("Failed to create test AOI. Check logs for errors.")
             return jsonify({'message': 'Failed to create test AOI'}), 500
     except Exception as e:
+        print(f"An error occurred: {e}")
         return jsonify({'message': f'An error occurred: {e}'}), 500
 
 @api_bp.route('/test_aois', methods=['GET'])
