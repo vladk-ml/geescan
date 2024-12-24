@@ -1,332 +1,372 @@
-import React from 'react';
-import { MapContainer, TileLayer, FeatureGroup } from 'react-leaflet';
-import L from 'leaflet';
+import React, { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Polygon, GeoJSON, FeatureGroup } from 'react-leaflet';
+import * as ReactLeafletGeoJSON from 'react-leaflet'; // Add this line here
+import L, { LatLngBounds, ControlPosition, FeatureGroup as LeafletFeatureGroup } from 'leaflet';
 import * as turf from '@turf/turf';
-import { 
-  Box, 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  Container,
-  Drawer,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  IconButton,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Snackbar,
-  Alert,
-  Divider
-} from '@mui/material';
+import * as material from '@mui/material';
 import {
-  Menu as MenuIcon,
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Save as SaveIcon,
-  Refresh as RefreshIcon,
-  Map as MapIcon
+    Menu as MenuIcon,
+    Edit as EditIcon,
+    Delete as DeleteIcon,
+    Map as MapIcon,
+    Refresh as RefreshIcon
 } from '@mui/icons-material';
 
-// Import Leaflet CSS
+// Import Leaflet and Leaflet Draw CSS
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
 // Import Leaflet Draw
 import 'leaflet-draw';
 
-// Fix Leaflet's default icon issue
-let DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
+// Fix for the default icon issue
+const DefaultIcon = L.icon({
+    iconUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    tooltipAnchor: [16, -28],
+    shadowSize: [41, 41]
 });
+
 L.Marker.prototype.options.icon = DefaultIcon;
 
 interface AOI {
-  id?: number;
-  name: string;
-  description: string;
-  geometry: GeoJSON.Feature;
-  area?: number;
-  center?: [number, number];
-  createdAt?: string;
-  updatedAt?: string;
+    id: number;
+    name: string;
+    description?: string;
+    geometry: any; // Ensure this matches your backend, or use GeoJSON.Geometry
+    area?: number;
+    center?: [number, number];
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 function App() {
-  const position: [number, number] = [51.505, -0.09];
-  const mapRef = React.useRef<L.Map | null>(null);
-  const drawnItemsRef = React.useRef<L.FeatureGroup | null>(null);
-  const [drawerOpen, setDrawerOpen] = React.useState(false);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [snackbarOpen, setSnackbarOpen] = React.useState(false);
-  const [snackbarMessage, setSnackbarMessage] = React.useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = React.useState<'success' | 'error'>('success');
-  const [currentAOI, setCurrentAOI] = React.useState<AOI | null>(null);
-  const [aois, setAOIs] = React.useState<AOI[]>([]);
-  const [aoiName, setAOIName] = React.useState('');
-  const [aoiDescription, setAOIDescription] = React.useState('');
+    const [aois, setAois] = useState<AOI[]>([]);
+    const position: [number, number] = [51.505, -0.09];
+    const mapRef = useRef<L.Map | null>(null);
+    const drawnItemsRef = useRef<LeafletFeatureGroup>(new L.FeatureGroup());
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+    const [currentAOI, setCurrentAOI] = useState<AOI | null>(null);
+    const [aoiName, setAOIName] = useState('');
+    const [aoiDescription, setAOIDescription] = useState('');
 
-  const calculateAOIMetrics = (geojson: GeoJSON.Feature): { area: number; center: [number, number] } => {
-    const area = turf.area(geojson);
-    const center = turf.center(geojson);
-    return {
-      area: Math.round((area / 1000000) * 100) / 100, // Convert to km² and round to 2 decimal places
-      center: [
-        Math.round(center.geometry.coordinates[0] * 1000000) / 1000000,
-        Math.round(center.geometry.coordinates[1] * 1000000) / 1000000
-      ]
+    // Function to calculate the area and center of a drawn polygon
+    const calculateAOIMetrics = (geojson: any): { area: number; center: [number, number] } => {
+        const area = turf.area(geojson);
+        const center = turf.center(geojson);
+        return {
+            area: Math.round((area / 1000000) * 100) / 100, // Convert to km² and round
+            center: [
+                Math.round(center.geometry.coordinates[0] * 1000000) / 1000000,
+                Math.round(center.geometry.coordinates[1] * 1000000) / 1000000
+            ]
+        };
     };
-  };
 
-  const handleCreated = (e: any) => {
-    const layer = e.layer;
-    const geojson = layer.toGeoJSON();
-    const metrics = calculateAOIMetrics(geojson);
-    console.log('New AOI created:', geojson);
-    setCurrentAOI({
-      name: '',
-      description: '',
-      geometry: geojson,
-      area: metrics.area,
-      center: metrics.center
-    });
-    setDialogOpen(true);
-  };
-
-  const handleSaveAOI = () => {
-    if (currentAOI && aoiName) {
-      const newAOI: AOI = {
-        ...currentAOI,
-        name: aoiName,
-        description: aoiDescription,
-        createdAt: new Date().toISOString()
-      };
-      setAOIs([...aois, newAOI]);
-      setSnackbarMessage('AOI saved successfully');
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
-      setDialogOpen(false);
-      setAOIName('');
-      setAOIDescription('');
-      setCurrentAOI(null);
-    }
-  };
-
-  const handleDeleteAOI = (aoi: AOI) => {
-    setAOIs(aois.filter(a => a !== aoi));
-    setSnackbarMessage('AOI deleted successfully');
-    setSnackbarSeverity('success');
-    setSnackbarOpen(true);
-    if (drawnItemsRef.current) {
-      drawnItemsRef.current.clearLayers();
-    }
-  };
-
-  const handleViewAOI = (aoi: AOI) => {
-    if (mapRef.current && drawnItemsRef.current) {
-      drawnItemsRef.current.clearLayers();
-      const layer = L.geoJSON(aoi.geometry);
-      drawnItemsRef.current.addLayer(layer);
-      const bounds = layer.getBounds();
-      mapRef.current.fitBounds(bounds);
-    }
-  };
-
-  React.useEffect(() => {
-    if (!mapRef.current) {
-      const map = L.map('map').setView(position, 13);
-      mapRef.current = map;
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(map);
-
-      // Initialize FeatureGroup for the draw control
-      const drawnItems = new L.FeatureGroup();
-      drawnItemsRef.current = drawnItems;
-      map.addLayer(drawnItems);
-
-      // Initialize draw control
-      const drawControl = new (L.Control as any).Draw({
-        position: 'topright',
-        draw: {
-          marker: false,
-          circle: false,
-          circlemarker: false,
-          polyline: false,
-          polygon: {
-            allowIntersection: false,
-            showArea: true,
-            drawError: {
-              color: '#e1e100',
-              message: '<strong>Oh snap!<strong> you can\'t draw that!'
-            },
-            shapeOptions: {
-              color: '#3388ff'
+    // Fetch and load AOIs from the database
+    const loadAois = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/aois');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-          },
-          rectangle: {
-            shapeOptions: {
-              color: '#3388ff'
+            const data = await response.json();
+            if (Array.isArray(data.aois)) {
+                const formattedAois = data.aois.map((aoi: any) => ({
+                    id: aoi.id,
+                    name: aoi.name,
+                    description: aoi.description,
+                    geometry: JSON.parse(aoi.geometry),
+                    area: aoi.area,
+                    center: aoi.center,
+                    createdAt: aoi.createdAt,
+                    updatedAt: aoi.updatedAt,
+                }));
+                setAois(formattedAois);
+            } else {
+                console.error('Unexpected data structure from API:', data);
             }
-          }
-        },
-        edit: {
-          featureGroup: drawnItems,
-          remove: true
+        } catch (error) {
+            console.error("Could not fetch AOIs:", error);
         }
-      });
-
-      map.addControl(drawControl);
-
-      // Handle created features
-      map.on(L.Draw.Event.CREATED, (e: any) => {
-        const layer = e.layer;
-        drawnItems.addLayer(layer);
-        handleCreated(e);
-      });
-    }
-
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
     };
-  }, []);
 
-  return (
-    <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton
-            size="large"
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            sx={{ mr: 2 }}
-            onClick={() => setDrawerOpen(true)}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            GEEScan - SAR Data Monitor
-          </Typography>
-        </Toolbar>
-      </AppBar>
+    const handleCreated = (e: L.Draw.CreatedEvent) => {
+        const { layer } = e;
+        const geojson = layer.toGeoJSON();
+        const metrics = calculateAOIMetrics(geojson);
 
-      <Drawer
-        anchor="left"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-      >
-        <Box sx={{ width: 350 }} role="presentation">
-          <List>
-            <ListItem>
-              <Typography variant="h6">Areas of Interest</Typography>
-            </ListItem>
-            <Divider />
-            {aois.map((aoi, index) => (
-              <React.Fragment key={index}>
-                <ListItem>
-                  <ListItemIcon>
-                    <MapIcon />
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={aoi.name}
-                    secondary={
-                      <React.Fragment>
-                        <Typography variant="body2" color="text.secondary">
-                          {aoi.description}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Area: {aoi.area} km²
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Center: [{aoi.center?.[0]}, {aoi.center?.[1]}]
-                        </Typography>
-                      </React.Fragment>
+        setCurrentAOI({
+            name: '',
+            description: '',
+            geometry: geojson.geometry as any, // Keep this for now
+            area: metrics.area,
+            center: metrics.center,
+            id: aois.length > 0 ? Math.max(...aois.map(aoi => aoi.id)) + 1 : 1,
+        });
+        setDialogOpen(true);
+    };
+
+    // Call this when the user clicks "Save" in the dialog
+    const handleSaveAOI = async () => {
+        if (!currentAOI || !aoiName) {
+            console.error('Error: currentAOI or aoiName is not defined');
+            return;
+        }
+
+        const newAOI = {
+            ...currentAOI,
+            name: aoiName,
+            description: aoiDescription,
+        };
+
+        await handleAoiDraw(newAOI);
+
+        setDialogOpen(false);
+        setCurrentAOI(null);
+        setAOIName('');
+        setAOIDescription('');
+    };
+
+    const handleAoiDraw = async (aoi: AOI) => {
+        try {
+            const geometryString = JSON.stringify(aoi.geometry);
+
+            const response = await fetch('http://localhost:5000/api/aois', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: aoi.name, description: aoi.description, geometry: geometryString }),
+            });
+
+            const newAoiResponse = await response.json();
+
+            if (response.ok) {
+                setAois([...aois, { ...newAoiResponse }]);
+                setSnackbarMessage('AOI created successfully');
+                setSnackbarSeverity('success');
+                setSnackbarOpen(true);
+                loadAois(); // Reload AOIs to reflect changes
+            } else {
+                setSnackbarMessage('Failed to save AOI: ' + newAoiResponse.message);
+                setSnackbarSeverity('error');
+                setSnackbarOpen(true);
+            }
+        } catch (error) {
+            console.error('Error creating AOI:', error);
+            setSnackbarMessage('Failed to save AOI');
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+        }
+    };
+
+    const handleDeleteAOI = async (aoiId: number) => {
+        try {
+            const response = await fetch(`http://localhost:5000/api/aois/${aoiId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                setAois(prevAois => prevAois.filter(aoi => aoi.id !== aoiId));
+                if (mapRef.current) {
+                    mapRef.current.eachLayer((layer: any) => {
+                        if (layer.feature && layer.feature.properties && layer.feature.properties.id === aoiId) {
+                            mapRef.current?.removeLayer(layer);
+                        }
+                    });
+                }
+                setSnackbarMessage('AOI deleted successfully');
+                setSnackbarSeverity('success');
+                setSnackbarOpen(true);
+            } else {
+                const result = await response.json();
+                setSnackbarMessage(`Error deleting AOI: ${result.message || response.statusText}`);
+                setSnackbarSeverity('error');
+                setSnackbarOpen(true);
+            }
+        } catch (error) {
+            console.error('Error deleting AOI:', error);
+            setSnackbarMessage('Failed to delete AOI. See console for details.');
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+        }
+    };
+
+    const handleViewAOI = (aoi: AOI) => {
+        if (mapRef.current && aoi.geometry) {
+            const geoJsonLayer = L.geoJSON(aoi.geometry);
+            drawnItemsRef.current?.clearLayers();
+            drawnItemsRef.current?.addLayer(geoJsonLayer);
+            const bounds = geoJsonLayer.getBounds();
+            if (bounds.isValid()) {
+                mapRef.current.fitBounds(bounds);
+            } else {
+                console.error('Invalid bounds for the layer of AOI:', aoi);
+            }
+        }
+    };
+
+    useEffect(() => {
+        if (!mapRef.current) {
+            const map = L.map('map', {
+                center: position,
+                zoom: 13,
+                layers: [
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    })
+                ]
+            });
+            mapRef.current = map;
+            drawnItemsRef.current = new L.FeatureGroup().addTo(map);
+
+            const drawOptions: L.Control.DrawConstructorOptions = {
+                position: 'topright' as ControlPosition,
+                draw: {
+                    polygon: {
+                        allowIntersection: false,
+                        drawError: {
+                            color: '#e1e100',
+                            message: '<strong>Error:</strong> Polygon intersections not allowed!'
+                        },
+                        shapeOptions: {
+                            color: 'purple'
+                        }
+                    },
+                    polyline: false,
+                    circle: false,
+                    rectangle: {
+                        shapeOptions: {
+                            color: 'green'
+                        }
+                    },
+                    marker: false,
+                    circlemarker: false
+                },
+                edit: {
+                    featureGroup: drawnItemsRef.current,
+                    remove: true
+                }
+            };
+            const drawControl = new (L.Control as any).Draw(drawOptions);
+            mapRef.current.addControl(drawControl);
+            mapRef.current.on('draw:created', handleCreated);
+
+            loadAois();
+        }
+        return () => {
+            mapRef.current?.off('draw:created', handleCreated);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (mapRef.current) {
+            drawnItemsRef.current.clearLayers();
+            aois.forEach(aoi => {
+                const geoJsonLayer = L.geoJSON(aoi.geometry, {
+                    onEachFeature: (feature, layer) => {
+                        layer.bindTooltip(aoi.name);
+                        layer.on('click', () => handleViewAOI(aoi));
+                        layer.feature = { properties: { id: aoi.id } };
                     }
-                  />
-                </ListItem>
-                <ListItem>
-                  <IconButton onClick={() => handleViewAOI(aoi)}>
-                    <RefreshIcon />
-                  </IconButton>
-                  <IconButton onClick={() => handleDeleteAOI(aoi)}>
-                    <DeleteIcon />
-                  </IconButton>
-                </ListItem>
-                <Divider />
-              </React.Fragment>
-            ))}
-          </List>
-        </Box>
-      </Drawer>
+                });
+                drawnItemsRef.current.addLayer(geoJsonLayer);
+            });
+        }
+    }, [aois]);
 
-      <Container maxWidth="xl" sx={{ mt: 2 }}>
-        <Box sx={{ height: 'calc(100vh - 100px)', width: '100%' }}>
-          <div id="map" style={{ height: '100%', width: '100%' }} />
-        </Box>
-      </Container>
-
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
-        <DialogTitle>Save Area of Interest</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Name"
-            fullWidth
-            variant="outlined"
-            value={aoiName}
-            onChange={(e) => setAOIName(e.target.value)}
-          />
-          <TextField
-            margin="dense"
-            label="Description"
-            fullWidth
-            multiline
-            rows={4}
-            variant="outlined"
-            value={aoiDescription}
-            onChange={(e) => setAOIDescription(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveAOI} variant="contained" color="primary">
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar 
-        open={snackbarOpen} 
-        autoHideDuration={6000} 
-        onClose={() => setSnackbarOpen(false)}
-      >
-        <Alert 
-          onClose={() => setSnackbarOpen(false)} 
-          severity={snackbarSeverity}
-          sx={{ width: '100%' }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-    </Box>
-  );
+    return (
+        <material.Box sx={{ display: 'flex' }}>
+            <material.Drawer
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+            >
+                <material.List>
+                    <material.ListItem button key="refresh" onClick={loadAois}>
+                        <material.ListItemIcon><RefreshIcon /></material.ListItemIcon>
+                        <material.ListItemText primary="Refresh AOIs" />
+                    </material.ListItem>
+                    {aois.map((aoi) => (
+                        <material.ListItem button key={aoi.id} onClick={() => handleViewAOI(aoi)}>
+                            <material.ListItemIcon><MapIcon /></material.ListItemIcon>
+                            <material.ListItemText primary={aoi.name} secondary={`Area: ${aoi.area} km²`} />
+                            <material.IconButton edge="end" aria-label="edit" onClick={(e) => { e.stopPropagation(); /* Implement edit functionality */ }}>
+                                <EditIcon />
+                            </material.IconButton>
+                            <material.IconButton edge="end" aria-label="delete" onClick={(e) => { e.stopPropagation(); handleDeleteAOI(aoi.id); }}>
+                                <DeleteIcon />
+                            </material.IconButton>
+                        </material.ListItem>
+                    ))}
+                </material.List>
+            </material.Drawer>
+            <material.Box component="main" sx={{ flexGrow: 1, p: 3, height: '100vh', position: 'relative' }}>
+                <material.AppBar position="static">
+                    <material.Toolbar>
+                        <material.IconButton
+                            size="large"
+                            edge="start"
+                            color="inherit"
+                            aria-label="menu"
+                            sx={{ mr: 2 }}
+                            onClick={() => setDrawerOpen(true)}
+                        >
+                            <MenuIcon />
+                        </material.IconButton>
+                        <material.Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+                            AOI Management
+                        </material.Typography>
+                    </material.Toolbar>
+                </material.AppBar>
+                <div id="map" style={{ height: 'calc(100vh - 64px)', width: '100%' }} />
+            </material.Box>
+            <material.Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
+                <material.DialogTitle>Name Your AOI</material.DialogTitle>
+                <material.DialogContent>
+                    <material.TextField
+                        autoFocus
+                        margin="dense"
+                        id="name"
+                        label="AOI Name"
+                        type="text"
+                        fullWidth
+                        variant="standard"
+                        value={aoiName}
+                        onChange={(e) => setAOIName(e.target.value)}
+                    />
+                    <material.TextField
+                        margin="dense"
+                        id="description"
+                        label="AOI Description"
+                        type="text"
+                        fullWidth
+                        variant="standard"
+                        value={aoiDescription}
+                        onChange={(e) => setAOIDescription(e.target.value)}
+                    />
+                </material.DialogContent>
+                <material.DialogActions>
+                    <material.Button onClick={() => setDialogOpen(false)}>Cancel</material.Button>
+                    <material.Button onClick={handleSaveAOI}>Save</material.Button>
+                </material.DialogActions>
+            </material.Dialog>
+            <material.Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={() => setSnackbarOpen(false)}
+                message={snackbarMessage}
+                severity={snackbarSeverity}
+            />
+        </material.Box>
+    );
 }
 
 export default App;
