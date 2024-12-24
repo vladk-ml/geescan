@@ -31,6 +31,32 @@ def get_db_connection():
                 print("Failed test fetch")
     return conn
 
+def create_aoi(name, geometry):
+    """Inserts a new AOI into the database."""
+    print(f"create_aoi called with name: {name}, geometry: {geometry}") # Debugging
+    conn = get_db_connection()
+    if conn is not None:
+        try:
+            with conn.cursor() as cur:
+                print("Executing query") # Debugging
+                cur.execute(
+                    "INSERT INTO aois (name, geometry) VALUES (%s, ST_GeogFromText(%s)) RETURNING id",
+                    (name, geometry)
+                )
+                print("Query executed") # Debugging
+                aoi_id = cur.fetchone()[0]
+                conn.commit()
+                print(f"Successfully created AOI with ID: {aoi_id}")
+                return aoi_id
+        except psycopg2.Error as e:
+            print(f"Error creating AOI: {e}")
+            return None
+        finally:
+            conn.close()
+    else:
+        print("Failed to establish database connection.")
+        return None
+
 def get_db_connection():
     """Establishes a connection to the PostgreSQL database."""
     conn = None

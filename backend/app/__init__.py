@@ -1,37 +1,33 @@
-from flask import Flask
-from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
-from dotenv import load_dotenv
 import os
 
-# Load environment variables
-load_dotenv()
+from flask import Flask
+from flask_cors import CORS
+from dotenv import load_dotenv
 
-# Initialize extensions
-db = SQLAlchemy()
+load_dotenv()  # Load environment variables from .env
 
 def create_app():
+    """
+    Creates and configures the Flask application.
+
+    Returns:
+        Flask: The configured Flask application instance.
+    """
+
     app = Flask(__name__)
-    
-    # Configure CORS
+
+    # Enable Cross-Origin Resource Sharing (CORS)
     CORS(app)
-    
-    # Configure database
-    app.config['SQLALCHEMY_DATABASE_URI'] = (
-        f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@"
-        f"{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
-    )
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    
-    # Initialize extensions with app
-    db.init_app(app)
-    
-    # Register blueprints
-    from app.api import api_bp
+
+    # Database configuration from environment variables
+    app.config['DB_HOST'] = os.environ.get('DB_HOST')
+    app.config['DB_PORT'] = os.environ.get('DB_PORT')
+    app.config['DB_NAME'] = os.environ.get('DB_NAME')
+    app.config['DB_USER'] = os.environ.get('DB_USER')
+    app.config['DB_PASSWORD'] = os.environ.get('DB_PASSWORD')
+
+    # Register the API Blueprint (routes defined in routes.py)
+    from app.api.routes import api_bp
     app.register_blueprint(api_bp, url_prefix='/api')
-    
-    # Create database tables
-    with app.app_context():
-        db.create_all()
-    
+
     return app

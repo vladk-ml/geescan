@@ -1,23 +1,35 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# General
+.DS_Store
+Thumbs.db
+*.log
 
-# dependencies
-/node_modules
-/.pnp
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+**/__pycache__/
+**/*.py[cod]
+
+# Node.js
+node_modules/
+.pnp
 .pnp.js
-frontend/node_modules
+frontend/node_modules/
 frontend/.pnp
 frontend/.pnp.js
 
-# testing
-/coverage
-frontend/coverage
-
-# production
+# Build directories
 /build
 frontend/build
 
-# misc
-.DS_Store
+# IDE/Editor
+.vscode/
+.idea/
+*.iml
+
+# dotenv environment variables file
+.env
 .env.local
 .env.development.local
 .env.test.local
@@ -27,16 +39,14 @@ frontend/.env.development.local
 frontend/.env.test.local
 frontend/.env.production.local
 
+# Optional: Docker
+docker-compose.override.yml
+.dockerignore
+
+# Debug Folders
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
-.env
