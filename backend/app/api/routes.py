@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from app.models.db import create_aoi, get_aois, get_aoi, update_aoi, delete_aoi
+from app.api.gee_utils import initialize_gee, export_aoi_to_drive, check_task_status
 
 api_bp = Blueprint('api', __name__)
 
@@ -99,3 +100,27 @@ def get_single_aoi(aoi_id):
             return jsonify({'message': 'AOI not found'}), 404
     except Exception as e:
         return jsonify({'message': f'Error fetching AOI: {e}'}), 500
+
+@api_bp.route('/auth/gee', methods=['POST'])
+def authenticate_gee():
+    """Initialize GEE authentication"""
+    data = request.get_json()
+    project_id = data.get('project_id')
+
+    result = initialize_gee(project_id)
+    return jsonify(result), 200 if result['status'] == 'success' else 500
+
+@api_bp.route('/aois/<int:aoi_id>/export', methods=['POST'])
+def export_aoi(aoi_id):
+    """Start GEE export task for an AOI"""
+    data = request.get_json() or {}
+    image_collection = data.get('image_collection', 'LANDSAT/LC08/C02/T1_TOA')
+
+    result = export_aoi_to_drive(aoi_id, image_collection)
+    return jsonify(result), 200 if result['status'] == 'success' else 500
+
+@api_bp.route('/export/status/<task_id>', methods=['GET'])
+def get_export_status(task_id):
+    """Check status of an export task"""
+    result = check_task_status(task_id)
+    return jsonify(result), 200 if result['status'] == 'success' else 500

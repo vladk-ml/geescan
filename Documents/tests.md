@@ -140,6 +140,78 @@ try {
     Write-Host "Error: $($_.Exception.Message)"
 }
 Write-Host ""
+```
+
+## 9. GEE Authentication
+**Endpoint**: `/api/auth/gee` (POST)
+
+```powershell
+Write-Host "--- Testing GEE Authentication (POST) ---"
+$uri = "http://localhost:5000/api/auth/gee"
+$body = @{
+    project_id = "your-project-id"  # Replace with your GEE project ID
+} | ConvertTo-Json
+
+try {
+    $response = Invoke-WebRequest -Uri $uri -Method Post -Body $body -ContentType "application/json"
+    Write-Host "Status Code: $($response.StatusCode)"
+    Write-Host "Content: $($response.Content)"
+} catch {
+    Write-Host "Error: $($_.Exception.Message)"
+}
+Write-Host ""
+```
+
+## 10. Export AOI to GeoTIFF
+**Endpoint**: `/api/aois/{aoi_id}/export` (POST)
+
+```powershell
+Write-Host "--- Testing AOI Export (POST) ---"
+$aoi_id = 1  # Replace with actual AOI ID
+$uri = "http://localhost:5000/api/aois/$aoi_id/export"
+$body = @{
+    image_collection = "LANDSAT/LC08/C02/T1_TOA"  # Optional: specify different collection
+} | ConvertTo-Json
+
+try {
+    $response = Invoke-WebRequest -Uri $uri -Method Post -Body $body -ContentType "application/json"
+    Write-Host "Status Code: $($response.StatusCode)"
+    Write-Host "Content: $($response.Content)"
+    
+    # Get the task_id from the response
+    $result = $response.Content | ConvertFrom-Json
+    $task_id = $result.task_id
+    
+    # Check task status
+    if ($task_id) {
+        Write-Host "Checking task status..."
+        $status_uri = "http://localhost:5000/api/export/status/$task_id"
+        $status_response = Invoke-WebRequest -Uri $status_uri -Method Get
+        Write-Host "Task Status: $($status_response.Content)"
+    }
+} catch {
+    Write-Host "Error: $($_.Exception.Message)"
+}
+Write-Host ""
+```
+
+## 11. Check Export Task Status
+**Endpoint**: `/api/export/status/{task_id}` (GET)
+
+```powershell
+Write-Host "--- Testing Export Status Check (GET) ---"
+$task_id = "your-task-id"  # Replace with actual task ID from export response
+$uri = "http://localhost:5000/api/export/status/$task_id"
+
+try {
+    $response = Invoke-WebRequest -Uri $uri -Method Get
+    Write-Host "Status Code: $($response.StatusCode)"
+    Write-Host "Content: $($response.Content)"
+} catch {
+    Write-Host "Error: $($_.Exception.Message)"
+}
+Write-Host ""
+```
 
 Explanation of Each Test:
 
@@ -200,3 +272,25 @@ Sends a GET request to retrieve a specific AOI.
 Important: You need to replace 1 in the $uri with an actual ID of an AOI in your database.
 
 Expects a status code of 200 and a JSON response containing the details of the requested AOI, or a 404 if the AOI is not found.
+
+/api/auth/gee (POST):
+
+Sends a POST request to authenticate with Google Earth Engine.
+
+Includes a JSON body with the project ID.
+
+Expects a status code of 200 and a JSON response confirming authentication.
+
+/api/aois/{aoi_id}/export (POST):
+
+Sends a POST request to export an AOI to GeoTIFF.
+
+Includes a JSON body with the image collection.
+
+Expects a status code of 200 and a JSON response containing the task ID.
+
+/api/export/status/{task_id} (GET):
+
+Sends a GET request to check the status of an export task.
+
+Expects a status code of 200 and a JSON response containing the task status.
