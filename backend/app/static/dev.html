@@ -5,138 +5,215 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
+            margin: 0;
             padding: 20px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .dashboard-layout {
+            display: flex;
+            gap: 20px;
+            max-width: 1800px;
+            width: 100%;
+        }
+        .main-content {
+            flex: 0 1 1000px; /* Don't grow, can shrink, base width 1000px */
+        }
+        .output-panel {
+            flex: 1;
+            position: sticky;
+            top: 20px;
+            height: calc(100vh - 40px);
+            min-width: 500px;
+            background-color: #252525;
+            border: 1px solid #333;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            align-self: flex-start;
+        }
+        .container {
+            max-width: 1000px; /* Reduced to make room for output */
+            margin: 0 auto;
+            position: relative;
         }
         .section {
             margin-bottom: 20px;
             padding: 15px;
-            border: 1px solid #ddd;
+            border: 1px solid #333;
             border-radius: 5px;
+            background-color: #252525;
+        }
+        .section h2 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+        }
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: flex-start;
+        }
+        .button-group {
+            flex: 1;
+            min-width: 300px;
+            margin: 5px;
+            padding: 10px;
+            background-color: #2d2d2d;
+            border-radius: 4px;
         }
         button {
             margin: 5px;
             padding: 8px 15px;
-            background-color: #4CAF50;
-            color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
         }
         button:hover {
-            background-color: #45a049;
+            filter: brightness(1.2);
         }
-        pre {
-            background-color: #f5f5f5;
-            padding: 15px;
-            border-radius: 5px;
-            overflow-x: auto;
+        /* Button colors by type */
+        button.health {
+            background-color: #4CAF50;
+            color: white;
+        }
+        button.auth {
+            background-color: #2196F3;
+            color: white;
+        }
+        button.aoi {
+            background-color: #FF9800;
+            color: white;
+        }
+        button.danger {
+            background-color: #f44336;
+            color: white;
+        }
+        button.export {
+            background-color: #9C27B0;
+            color: white;
         }
         select, input {
             margin: 5px;
             padding: 8px;
             border-radius: 4px;
-            border: 1px solid #ddd;
+            border: 1px solid #444;
+            background-color: #2d2d2d;
+            color: #e0e0e0;
+        }
+        select:focus, input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        .button-description {
+            font-size: 0.9em;
+            color: #888;
+            margin: 5px 0;
+            padding-left: 10px;
         }
         .preset-area {
             margin-top: 10px;
             padding: 10px;
-            background-color: #f9f9f9;
+            background-color: #1a1a1a;
             border-radius: 4px;
-        }
-        .button-description {
-            font-size: 0.9em;
-            color: #666;
-            margin: 5px 0;
-            padding-left: 10px;
-        }
-        .button-group {
-            margin: 10px 0;
         }
     </style>
 </head>
 <body>
-    <h1>GEEScan Dev Dashboard</h1>
-    
-    <div class="section">
-        <h2>System Status</h2>
-        <div class="button-group">
-            <button onclick="checkHealth()">Check All Health</button>
-            <div class="button-description">GET /api/health - Combined health check of all system components</div>
-        </div>
-        <div class="button-group">
-            <button onclick="checkAPIHealth()">Check API Health</button>
-            <div class="button-description">GET /api/health/api - Tests API server status</div>
-        </div>
-        <div class="button-group">
-            <button onclick="checkDBHealth()">Check Database Health</button>
-            <div class="button-description">GET /api/health/db - Tests PostgreSQL database connection</div>
-        </div>
-        <div class="button-group">
-            <button onclick="checkGEEHealth()">Check GEE Health</button>
-            <div class="button-description">GET /api/health/gee - Tests GEE service status</div>
-        </div>
-        <div class="button-group">
-            <button onclick="initGEE()">Initialize GEE</button>
-            <div class="button-description">POST /api/auth/gee - Initializes Google Earth Engine authentication</div>
-        </div>
-        <div class="button-group">
-            <button onclick="checkGEEStatus()">Check GEE Status</button>
-            <div class="button-description">GET /api/auth/gee/status - Verifies GEE authentication status</div>
-        </div>
-    </div>
+    <div class="dashboard-layout">
+        <div class="main-content">
+            <h1>GEEScan Dev Dashboard</h1>
+            
+            <div class="section">
+                <h2>System Status</h2>
+                <div class="button-row">
+                    <div class="button-group">
+                        <button class="health" onclick="checkHealth()">Check All Health</button>
+                        <div class="button-description">GET /api/health - Combined health check</div>
+                    </div>
+                    <div class="button-group">
+                        <button class="health" onclick="checkAPIHealth()">Check API Health</button>
+                        <div class="button-description">GET /api/health/api - API status</div>
+                    </div>
+                    <div class="button-group">
+                        <button class="health" onclick="checkDBHealth()">Check Database Health</button>
+                        <div class="button-description">GET /api/health/db - Database status</div>
+                    </div>
+                    <div class="button-group">
+                        <button class="health" onclick="checkGEEHealth()">Check GEE Health</button>
+                        <div class="button-description">GET /api/health/gee - GEE status</div>
+                    </div>
+                    <div class="button-group">
+                        <button class="auth" onclick="initGEE()">Initialize GEE</button>
+                        <div class="button-description">POST /api/auth/gee - Initialize GEE auth</div>
+                    </div>
+                </div>
+            </div>
 
-    <div class="section">
-        <h2>AOI Management</h2>
-        <div class="button-group">
-            <button onclick="listAOIs()">List All AOIs</button>
-            <div class="button-description">GET /api/aois - Retrieves all Areas of Interest</div>
-        </div>
-        <div class="button-group">
-            <input type="number" id="aoiId" placeholder="AOI ID">
-            <button onclick="getAOI()">Get AOI</button>
-            <div class="button-description">GET /api/aois/{id} - Retrieves a specific AOI by ID</div>
-            <button onclick="deleteAOI()">Delete AOI</button>
-            <div class="button-description">DELETE /api/aois/{id} - Removes an AOI by ID</div>
-        </div>
-        <div>
-            <h3>Create New AOI</h3>
-            <div class="button-description">POST /api/aois - Creates a new Area of Interest</div>
-            <select id="presetArea" onchange="updateGeometry()">
-                <option value="">Select Area</option>
-                <option value="manhattan">Manhattan Downtown</option>
-                <option value="centralpark">Central Park Lake</option>
-                <option value="timessquare">Times Square Block</option>
-            </select>
-            <input type="text" id="aoiName" placeholder="AOI Name">
-            <input type="text" id="aoiDescription" placeholder="AOI Description (optional)">
-            <button onclick="createAOI()">Create AOI</button>
-            <div class="preset-area">
-                <pre id="selectedGeometry">Select an area to see its coordinates</pre>
+            <div class="section">
+                <h2>AOI Management</h2>
+                <div class="button-row">
+                    <div class="button-group">
+                        <button class="aoi" onclick="listAOIs()">List All AOIs</button>
+                        <div class="button-description">GET /api/aois - List all AOIs</div>
+                    </div>
+                    <div class="button-group">
+                        <input type="number" id="aoiId" placeholder="AOI ID">
+                        <button class="aoi" onclick="getAOI()">Get AOI</button>
+                        <button class="danger" onclick="deleteAOI()">Delete AOI</button>
+                        <div class="button-description">GET/DELETE /api/aois/{id}</div>
+                    </div>
+                </div>
+                
+                <div class="button-row">
+                    <div class="button-group" style="flex: 2">
+                        <h3>Create New AOI</h3>
+                        <div class="button-description">POST /api/aois - Create new AOI</div>
+                        <select id="presetArea" onchange="updateGeometry()">
+                            <option value="">Select Area</option>
+                            <option value="manhattan">Manhattan Downtown</option>
+                            <option value="centralpark">Central Park Lake</option>
+                            <option value="timessquare">Times Square Block</option>
+                        </select>
+                        <input type="text" id="aoiName" placeholder="AOI Name">
+                        <input type="text" id="aoiDescription" placeholder="AOI Description (optional)">
+                        <button class="aoi" onclick="createAOI()">Create AOI</button>
+                        <div class="preset-area">
+                            <pre id="selectedGeometry">Select an area to see its coordinates</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Export Management</h2>
+                <div class="button-row">
+                    <div class="button-group">
+                        <input type="number" id="exportAoiId" placeholder="AOI ID">
+                        <input type="date" id="startDate" value="2024-01-01">
+                        <input type="date" id="endDate" value="2024-01-30">
+                        <button class="export" onclick="exportAOI()">Export AOI</button>
+                        <div class="button-description">POST /api/export - Start export task</div>
+                    </div>
+                    <div class="button-group">
+                        <input type="text" id="taskId" placeholder="Task ID">
+                        <button class="export" onclick="checkExportStatus()">Check Status</button>
+                        <div class="button-description">GET /api/export/{task_id}/status</div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="section">
-        <h2>Export Management</h2>
-        <div class="button-group">
-            <input type="number" id="exportAoiId" placeholder="AOI ID">
-            <input type="date" id="startDate" value="2024-01-01">
-            <input type="date" id="endDate" value="2024-01-30">
-            <button onclick="exportAOI()">Export AOI</button>
-            <div class="button-description">POST /api/export - Starts a GEE export task for the specified AOI and date range</div>
+        <div class="output-panel">
+            <h2>Results</h2>
+            <pre id="results">Results will appear here...</pre>
         </div>
-        <div class="button-group">
-            <input type="text" id="taskId" placeholder="Task ID">
-            <button onclick="checkExportStatus()">Check Status</button>
-            <div class="button-description">GET /api/export/{task_id}/status - Checks the status of a GEE export task</div>
-        </div>
-    </div>
-
-    <div class="section">
-        <h2>Results</h2>
-        <pre id="results">Results will appear here...</pre>
     </div>
 
     <script>
