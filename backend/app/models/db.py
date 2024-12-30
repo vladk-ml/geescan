@@ -40,7 +40,11 @@ def create_aoi(name, geometry):
             with conn.cursor() as cur:
                 print("Executing query") # Debugging
                 cur.execute(
-                    "INSERT INTO aois (name, geometry) VALUES (%s, ST_GeogFromText(%s)) RETURNING id",
+                    """
+                    INSERT INTO aois (name, geometry) 
+                    VALUES (%s, ST_GeomFromGeoJSON(%s)::geography) 
+                    RETURNING id
+                    """,
                     (name, geometry)
                 )
                 print("Query executed") # Debugging
@@ -50,39 +54,13 @@ def create_aoi(name, geometry):
                 return aoi_id
         except psycopg2.Error as e:
             print(f"Error creating AOI: {e}")
+            conn.rollback()
             return None
         finally:
             conn.close()
     else:
         print("Failed to establish database connection.")
         return None
-
-def get_db_connection():
-    """Establishes a connection to the PostgreSQL database."""
-    conn = None
-    try:
-        conn = psycopg2.connect(
-            host=os.environ.get("DB_HOST"),
-            port=os.environ.get("DB_PORT"),
-            database=os.environ.get("DB_NAME"),
-            user=os.environ.get("DB_USER"),
-            password=os.environ.get("DB_PASSWORD")
-        )
-        print("Database connection successful") # Debugging
-    except psycopg2.Error as e:
-        print(f"Error connecting to database: {e}")
-    finally:
-        if conn is not None:
-            print("Connection is not none, testing fetch")
-            try:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT * FROM aois")
-                    result = cur.fetchall()
-                    print(result)
-                    print("Connection test: OK")
-            except:
-                print("Failed test fetch")
-    return conn
 
 def get_aois():
     """Retrieves all AOIs from the database."""
@@ -99,12 +77,12 @@ def get_aois():
                         'name': row[1],
                         'geometry': row[2]
                     })
-                return aois
         except psycopg2.Error as e:
             print(f"Error getting AOIs: {e}")
             return None
         finally:
             conn.close()
+    return aois
 
 def get_aoi(aoi_id):
     """Retrieves a specific AOI by its ID."""

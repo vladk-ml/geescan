@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_from_directory
 from app.models.db import create_aoi, get_aois, get_aoi, update_aoi, delete_aoi
 from app.api.gee_utils import initialize_gee, export_aoi_to_asset, check_task_status
 import os
@@ -66,13 +66,16 @@ def test_aois():
 def aois():
     try:
         aois = get_aois()
+        print(f"Fetched AOIs: {aois}")  # Debug logging
         return jsonify({'message': 'Successfully fetched AOIs', 'aois': aois}), 200
     except Exception as e:
+        print(f"Error in /aois route: {e}")  # Debug logging
         return jsonify({'message': f'An error occurred while fetching AOIs: {e}'}), 500
 
 @api_bp.route('/aois', methods=['POST'])
 def create_new_aoi():
     data = request.get_json()
+    print(f"Received data: {data}")  # Debug log
 
     # Basic input validation
     if not data or 'name' not in data or 'geometry' not in data:
@@ -81,9 +84,30 @@ def create_new_aoi():
         return jsonify({'message': 'Bad Request: Name and geometry cannot be empty'}), 400
 
     try:
-        new_aoi_id = create_aoi(data['name'], data['geometry'])
-        return jsonify({'message': 'AOI created', 'id': new_aoi_id}), 201
+        # Convert geometry to WKT format if it's a GeoJSON
+        geometry = data['geometry']
+        print(f"Input geometry: {geometry}")  # Debug log
+        
+        # Ensure geometry is a string
+        if isinstance(geometry, dict):
+            geometry = json.dumps(geometry)
+        print(f"Processed geometry: {geometry}")  # Debug log
+        
+        # Create AOI and get its ID
+        new_aoi_id = create_aoi(data['name'], geometry)
+        print(f"Result from create_aoi: {new_aoi_id}")  # Debug log
+        
+        if new_aoi_id:
+            # Get the newly created AOI to return its full data
+            new_aoi = get_aoi(new_aoi_id)
+            return jsonify({
+                'message': 'Successfully created AOI',
+                'aoi': new_aoi
+            }), 201
+        else:
+            return jsonify({'message': 'Failed to create AOI'}), 500
     except Exception as e:
+        print(f"Error in create_new_aoi: {str(e)}")  # Debug log
         return jsonify({'message': f'Error creating AOI: {e}'}), 500
 
 @api_bp.route('/aois/<int:aoi_id>', methods=['PUT'])
@@ -284,6 +308,11 @@ def delete_time_preset(preset_id):
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@api_bp.route('/dev', methods=['GET'])
+def dev_dashboard():
+    """Serve the development dashboard"""
+    return send_from_directory('static', 'dev.html')
 
 @api_bp.route('/test', methods=['GET'])
 @ensure_gee_initialized

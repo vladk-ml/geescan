@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GEEScan Dev Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            margin: 5px;
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        select, input {
+            margin: 5px;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .preset-area {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>GEEScan Dev Dashboard</h1>
+    
+    <div class="section">
+        <h2>Authentication</h2>
+        <button onclick="initGEE()">Initialize GEE</button>
+        <button onclick="checkGEEStatus()">Check Status</button>
+    </div>
+
+    <div class="section">
+        <h2>AOI Management</h2>
+        <button onclick="listAOIs()">List All AOIs</button>
+        <div>
+            <input type="number" id="aoiId" placeholder="AOI ID">
+            <button onclick="getAOI()">Get AOI</button>
+            <button onclick="deleteAOI()">Delete AOI</button>
+        </div>
+        <div>
+            <h3>Create New AOI</h3>
+            <select id="presetArea" onchange="updateGeometry()">
+                <option value="">Select Area</option>
+                <option value="manhattan">Manhattan Downtown</option>
+                <option value="centralpark">Central Park Lake</option>
+                <option value="timessquare">Times Square Block</option>
+            </select>
+            <input type="text" id="aoiName" placeholder="AOI Name">
+            <button onclick="createAOI()">Create AOI</button>
+            <div class="preset-area">
+                <pre id="selectedGeometry">Select an area to see its coordinates</pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Export Management</h2>
+        <div>
+            <input type="number" id="exportAoiId" placeholder="AOI ID">
+            <input type="date" id="startDate" value="2024-01-01">
+            <input type="date" id="endDate" value="2024-01-30">
+            <button onclick="exportAOI()">Export AOI</button>
+        </div>
+        <div>
+            <input type="text" id="taskId" placeholder="Task ID">
+            <button onclick="checkExportStatus()">Check Status</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Results</h2>
+        <pre id="results">Results will appear here...</pre>
+    </div>
+
+    <script>
+        const presetGeometries = {
+            manhattan: {
+                type: "Polygon",
+                coordinates: [[
+                    [-74.0060, 40.7128],
+                    [-74.0065, 40.7128],
+                    [-74.0065, 40.7123],
+                    [-74.0060, 40.7123],
+                    [-74.0060, 40.7128]
+                ]]
+            },
+            centralpark: {
+                type: "Polygon",
+                coordinates: [[
+                    [-73.9680, 40.7735],
+                    [-73.9685, 40.7735],
+                    [-73.9685, 40.7730],
+                    [-73.9680, 40.7730],
+                    [-73.9680, 40.7735]
+                ]]
+            },
+            timessquare: {
+                type: "Polygon",
+                coordinates: [[
+                    [-73.9855, 40.7580],
+                    [-73.9860, 40.7580],
+                    [-73.9860, 40.7575],
+                    [-73.9855, 40.7575],
+                    [-73.9855, 40.7580]
+                ]]
+            }
+        };
+
+        function updateGeometry() {
+            const selected = document.getElementById('presetArea').value;
+            const geometry = selected ? presetGeometries[selected] : null;
+            document.getElementById('selectedGeometry').textContent = 
+                geometry ? JSON.stringify(geometry, null, 2) : 'Select an area to see its coordinates';
+        }
+
+        async function displayResult(promise) {
+            try {
+                const result = await promise;
+                document.getElementById('results').textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('results').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function initGEE() {
+            displayResult(
+                fetch('/api/auth/gee', { method: 'POST' }).then(r => r.json())
+            );
+        }
+
+        async function checkGEEStatus() {
+            displayResult(
+                fetch('/api/auth/gee/status').then(r => r.json())
+            );
+        }
+
+        async function listAOIs() {
+            displayResult(
+                fetch('/api/aois').then(r => r.json())
+            );
+        }
+
+        async function getAOI() {
+            const id = document.getElementById('aoiId').value;
+            if (!id) {
+                alert('Please enter an AOI ID');
+                return;
+            }
+            displayResult(
+                fetch(`/api/aois/${id}`).then(r => r.json())
+            );
+        }
+
+        async function createAOI() {
+            const name = document.getElementById('aoiName').value;
+            const selected = document.getElementById('presetArea').value;
+            if (!name || !selected) {
+                alert('Please enter a name and select an area');
+                return;
+            }
+            const geometry = presetGeometries[selected];
+            displayResult(
+                fetch('/api/aois', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, geometry })
+                }).then(r => r.json())
+            );
+        }
+
+        async function deleteAOI() {
+            const id = document.getElementById('aoiId').value;
+            if (!id) {
+                alert('Please enter an AOI ID');
+                return;
+            }
+            if (!confirm(`Are you sure you want to delete AOI ${id}?`)) {
+                return;
+            }
+            displayResult(
+                fetch(`/api/aois/${id}`, { method: 'DELETE' }).then(r => r.json())
+            );
+        }
+
+        async function exportAOI() {
+            const id = document.getElementById('exportAoiId').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            if (!id || !startDate || !endDate) {
+                alert('Please fill in all export fields');
+                return;
+            }
+            displayResult(
+                fetch(`/api/aois/${id}/export`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        start_date: startDate,
+                        end_date: endDate,
+                        polarization: ['VV', 'VH'],
+                        orbit: 'ASCENDING'
+                    })
+                }).then(r => r.json())
+            );
+        }
+
+        async function checkExportStatus() {
+            const taskId = document.getElementById('taskId').value;
+            if (!taskId) {
+                alert('Please enter a Task ID');
+                return;
+            }
+            displayResult(
+                fetch(`/api/export/status/${taskId}`).then(r => r.json())
+            );
+        }
+    </script>
+</body>
+</html>
