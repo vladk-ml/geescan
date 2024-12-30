@@ -1,29 +1,35 @@
 @echo off
-echo Initializing GEEScan Docker containers...
+echo Initializing GEEScan containers...
 
-:: Check if containers already exist
-docker-compose ps
-echo.
-set /p continue="Do you want to proceed with container setup? (Y/N): "
-if /i "%continue%" neq "Y" (
-    echo Setup cancelled.
+:: Check if Docker is running
+docker info > nul 2>&1
+if %errorlevel% neq 0 (
+    echo Docker is not running. Please start Docker Desktop and try again.
+    pause
     exit /b
 )
 
-:: Build and start containers in detached mode
-echo Building and starting containers...
+:: Create Docker network if it doesn't exist
+docker network create geescan-network 2>nul || ver>nul
+
+:: Start containers with docker-compose
+echo Starting containers with docker-compose...
 docker-compose up -d
 
-echo.
+:: Wait for PostgreSQL to be ready
 echo Waiting for PostgreSQL to be ready...
-timeout /t 15
+:check_postgres
+docker exec geescan-postgres-1 pg_isready -h localhost -p 5432 > nul 2>&1
+if %errorlevel% neq 0 (
+    echo|set /p=".."
+    timeout /t 1 /nobreak > nul
+    goto check_postgres
+)
+echo.
 
+echo Containers initialized successfully!
 echo.
-echo Docker containers have been initialized!
-echo PostgreSQL is available at localhost:5432
+echo PostgreSQL is available at: localhost:5432
+echo PgAdmin is available at: http://localhost:5050
 echo.
-echo You can now use:
-echo - start_app.bat to start the application
-echo - clear_ports.bat to stop the application (preserves containers)
-echo.
-pause
+echo You can now run appstart.bat to start the application
