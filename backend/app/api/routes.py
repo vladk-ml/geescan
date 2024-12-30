@@ -93,8 +93,11 @@ def create_new_aoi():
             geometry = json.dumps(geometry)
         print(f"Processed geometry: {geometry}")  # Debug log
         
+        # Get optional description
+        description = data.get('description')
+        
         # Create AOI and get its ID
-        new_aoi_id = create_aoi(data['name'], geometry)
+        new_aoi_id = create_aoi(data['name'], geometry, description)
         print(f"Result from create_aoi: {new_aoi_id}")  # Debug log
         
         if new_aoi_id:

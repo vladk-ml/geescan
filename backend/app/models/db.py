@@ -31,7 +31,7 @@ def get_db_connection():
                 print("Failed test fetch")
     return conn
 
-def create_aoi(name, geometry):
+def create_aoi(name, geometry, description=None):
     """Inserts a new AOI into the database."""
     print(f"create_aoi called with name: {name}, geometry: {geometry}") # Debugging
     conn = get_db_connection()
@@ -41,11 +41,11 @@ def create_aoi(name, geometry):
                 print("Executing query") # Debugging
                 cur.execute(
                     """
-                    INSERT INTO aois (name, geometry) 
-                    VALUES (%s, ST_GeomFromGeoJSON(%s)::geography) 
+                    INSERT INTO aois (name, geometry, description) 
+                    VALUES (%s, ST_GeomFromGeoJSON(%s)::geography, %s) 
                     RETURNING id
                     """,
-                    (name, geometry)
+                    (name, geometry, description)
                 )
                 print("Query executed") # Debugging
                 aoi_id = cur.fetchone()[0]
@@ -69,13 +69,21 @@ def get_aois():
     if conn is not None:
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT id, name, ST_AsGeoJSON(geometry) as geometry FROM aois")
+                cur.execute("""
+                    SELECT id, name, description, ST_AsGeoJSON(geometry) as geometry,
+                           created_at, updated_at
+                    FROM aois
+                    ORDER BY created_at DESC
+                """)
                 rows = cur.fetchall()
                 for row in rows:
                     aois.append({
                         'id': row[0],
                         'name': row[1],
-                        'geometry': row[2]
+                        'description': row[2],
+                        'geometry': row[3],
+                        'created_at': row[4].isoformat() if row[4] else None,
+                        'updated_at': row[5].isoformat() if row[5] else None
                     })
         except psycopg2.Error as e:
             print(f"Error getting AOIs: {e}")
@@ -90,13 +98,21 @@ def get_aoi(aoi_id):
     if conn is not None:
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT id, name, ST_AsGeoJSON(geometry) as geometry FROM aois WHERE id = %s", (aoi_id,))
+                cur.execute("""
+                    SELECT id, name, description, ST_AsGeoJSON(geometry) as geometry,
+                           created_at, updated_at
+                    FROM aois 
+                    WHERE id = %s
+                """, (aoi_id,))
                 row = cur.fetchone()
                 if row:
                     return {
                         'id': row[0],
                         'name': row[1],
-                        'geometry': row[2]
+                        'description': row[2],
+                        'geometry': row[3],
+                        'created_at': row[4].isoformat() if row[4] else None,
+                        'updated_at': row[5].isoformat() if row[5] else None
                     }
                 else:
                     return None
@@ -105,16 +121,22 @@ def get_aoi(aoi_id):
             return None
         finally:
             conn.close()
+    return None
 
-def update_aoi(aoi_id, name, geometry):
+def update_aoi(aoi_id, name, geometry, description=None):
     """Updates an existing AOI in the database."""
     conn = get_db_connection()
     if conn is not None:
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "UPDATE aois SET name = %s, geometry = ST_GeogFromText(%s) WHERE id = %s",
-                    (name, geometry, aoi_id)
+                    """
+                    UPDATE aois 
+                    SET name = %s, geometry = ST_GeomFromGeoJSON(%s)::geography, 
+                        description = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                    """,
+                    (name, geometry, description, aoi_id)
                 )
                 conn.commit()
                 return True

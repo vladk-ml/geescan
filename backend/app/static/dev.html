@@ -73,6 +73,7 @@
                 <option value="timessquare">Times Square Block</option>
             </select>
             <input type="text" id="aoiName" placeholder="AOI Name">
+            <input type="text" id="aoiDescription" placeholder="AOI Description (optional)">
             <button onclick="createAOI()">Create AOI</button>
             <div class="preset-area">
                 <pre id="selectedGeometry">Select an area to see its coordinates</pre>
@@ -181,6 +182,8 @@
         async function createAOI() {
             const name = document.getElementById('aoiName').value;
             const selected = document.getElementById('presetArea').value;
+            const description = document.getElementById('aoiDescription').value;
+            
             if (!name || !selected) {
                 alert('Please enter a name and select an area');
                 return;
@@ -190,7 +193,11 @@
                 fetch('/api/aois', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, geometry })
+                    body: JSON.stringify({ 
+                        name, 
+                        geometry,
+                        description: description || null 
+                    })
                 }).then(r => r.json())
             );
         }
