@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from app.models.db import create_aoi, get_aois, get_aoi, update_aoi, delete_aoi
-from app.api.gee_utils import initialize_gee, export_aoi_to_drive, check_task_status
+from app.api.gee_utils import initialize_gee, export_aoi_to_asset, check_task_status
 import os
 import json
 from flask import current_app
@@ -126,7 +126,7 @@ def export_aoi(aoi_id):
             'orbit': data.get('orbit', 'ASCENDING')
         }
         
-        result = export_aoi_to_drive(aoi_id, params)
+        result = export_aoi_to_asset(aoi_id, params)
         return jsonify(result), 200 if result['status'] == 'success' else 500
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500

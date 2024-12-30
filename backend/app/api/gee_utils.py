@@ -48,7 +48,7 @@ def get_time_range(preset_id=None):
     start_date = end_date - timedelta(days=days_back)
     return start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')
 
-def export_aoi_to_drive(aoi_id, params=None):
+def export_aoi_to_asset(aoi_id, params=None):
     """
     Creates a GEE export task for a given AOI ID
     params can include:
@@ -95,9 +95,11 @@ def export_aoi_to_drive(aoi_id, params=None):
         image = collection.first().clip(geometry)
 
         # Set up export task
-        task = ee.batch.Export.image.toDrive(
+        asset_id = f"projects/{os.getenv('GEE_PROJECT')}/assets/AOI_{aoi_id}_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        task = ee.batch.Export.image.toAsset(
             image=image,
             description=f'AOI_{aoi_id}_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}',
+            assetId=asset_id,
             scale=30,
             region=geometry,
             maxPixels=1e13
@@ -110,6 +112,7 @@ def export_aoi_to_drive(aoi_id, params=None):
             "status": "success",
             "message": "Export task started",
             "task_id": task.id,
+            "asset_id": asset_id,
             "parameters": {
                 "start_date": start_date,
                 "end_date": end_date,

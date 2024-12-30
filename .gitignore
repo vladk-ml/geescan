@@ -25,8 +25,10 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-**/__pycache__/
+**/__pycache__/**
 **/*.py[cod]
+backend/**/__pycache__/**
+backend/**/*.py[cod]
 
 # Node.js
 node_modules/
@@ -66,3 +68,4 @@ frontend/yarn-error.log*
 # GEE Service Account
 **/gee-service-account.json
 backend/app/gee-service-account.json
+backend/app/api/__pycache__/routes.cpython-312.pyc
