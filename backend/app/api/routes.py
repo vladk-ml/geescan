@@ -1,6 +1,9 @@
 from flask import Blueprint, jsonify, request
 from app.models.db import create_aoi, get_aois, get_aoi, update_aoi, delete_aoi
-from app.api.gee_utils import initialize_gee, export_aoi_to_drive, check_task_status
+from app.api.gee_utils import initialize_gee, export_aoi_to_drive, check_task_status, export_aoi_to_local
+import os
+import json
+from flask import current_app
 
 api_bp = Blueprint('api', __name__)
 
@@ -104,23 +107,134 @@ def get_single_aoi(aoi_id):
 @api_bp.route('/auth/gee', methods=['POST'])
 def authenticate_gee():
     """Initialize GEE authentication"""
-    data = request.get_json()
-    project_id = data.get('project_id')
-
-    result = initialize_gee(project_id)
-    return jsonify(result), 200 if result['status'] == 'success' else 500
+    try:
+        result = initialize_gee()
+        return jsonify(result), 200 if result['status'] == 'success' else 500
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @api_bp.route('/aois/<int:aoi_id>/export', methods=['POST'])
 def export_aoi(aoi_id):
     """Start GEE export task for an AOI"""
-    data = request.get_json() or {}
-    image_collection = data.get('image_collection', 'LANDSAT/LC08/C02/T1_TOA')
-
-    result = export_aoi_to_drive(aoi_id, image_collection)
-    return jsonify(result), 200 if result['status'] == 'success' else 500
+    try:
+        data = request.get_json() or {}
+        params = {
+            'start_date': data.get('start_date'),
+            'end_date': data.get('end_date'),
+            'polarization': data.get('polarization', ['VV', 'VH']),
+            'orbit': data.get('orbit', 'ASCENDING')
+        }
+        
+        result = export_aoi_to_drive(aoi_id, params)
+        return jsonify(result), 200 if result['status'] == 'success' else 500
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @api_bp.route('/export/status/<task_id>', methods=['GET'])
 def get_export_status(task_id):
     """Check status of an export task"""
     result = check_task_status(task_id)
     return jsonify(result), 200 if result['status'] == 'success' else 500
+
+@api_bp.route('/preferences', methods=['GET', 'POST'])
+def handle_preferences():
+    """Handle user preferences like default time ranges"""
+    prefs_file = os.path.join(current_app.root_path, 'user_preferences.json')
+    
+    if request.method == 'POST':
+        try:
+            data = request.get_json()
+            with open(prefs_file, 'w') as f:
+                json.dump(data, f)
+            return jsonify({"status": "success", "message": "Preferences saved"}), 200
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+    else:
+        try:
+            if os.path.exists(prefs_file):
+                with open(prefs_file, 'r') as f:
+                    return jsonify(json.load(f)), 200
+            return jsonify({}), 200
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+@api_bp.route('/time-presets', methods=['GET'])
+def list_time_presets():
+    """List all time range presets"""
+    try:
+        presets_file = os.path.join(current_app.root_path, 'time_range_presets.json')
+        if os.path.exists(presets_file):
+            with open(presets_file, 'r') as f:
+                data = json.load(f)
+                return jsonify({"status": "success", "presets": data["presets"]}), 200
+        return jsonify({"status": "error", "message": "No presets found"}), 404
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@api_bp.route('/time-presets', methods=['POST'])
+def create_time_preset():
+    """Create a new time range preset"""
+    try:
+        data = request.get_json()
+        if not data or 'name' not in data or 'days_back' not in data:
+            return jsonify({"status": "error", "message": "Name and days_back required"}), 400
+
+        presets_file = os.path.join(current_app.root_path, 'time_range_presets.json')
+        
+        # Load existing presets
+        if os.path.exists(presets_file):
+            with open(presets_file, 'r') as f:
+                presets_data = json.load(f)
+        else:
+            presets_data = {"presets": {}, "next_id": 1}
+
+        # Create new preset
+        preset_id = f"preset_{presets_data['next_id']}"
+        presets_data['next_id'] += 1
+        
+        presets_data['presets'][preset_id] = {
+            "id": preset_id,
+            "name": data['name'],
+            "description": data.get('description', ''),
+            "days_back": data['days_back']
+        }
+
+        # Save updated presets
+        with open(presets_file, 'w') as f:
+            json.dump(presets_data, f, indent=4)
+
+        return jsonify({
+            "status": "success",
+            "message": "Preset created",
+            "preset": presets_data['presets'][preset_id]
+        }), 201
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@api_bp.route('/time-presets/<preset_id>', methods=['DELETE'])
+def delete_time_preset(preset_id):
+    """Delete a time range preset"""
+    try:
+        if preset_id == 'default':
+            return jsonify({"status": "error", "message": "Cannot delete default preset"}), 400
+
+        presets_file = os.path.join(current_app.root_path, 'time_range_presets.json')
+        if not os.path.exists(presets_file):
+            return jsonify({"status": "error", "message": "No presets found"}), 404
+
+        with open(presets_file, 'r') as f:
+            presets_data = json.load(f)
+
+        if preset_id not in presets_data['presets']:
+            return jsonify({"status": "error", "message": "Preset not found"}), 404
+
+        del presets_data['presets'][preset_id]
+
+        with open(presets_file, 'w') as f:
+            json.dump(presets_data, f, indent=4)
+
+        return jsonify({"status": "success", "message": "Preset deleted"}), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500

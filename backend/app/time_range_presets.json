@@ -1,0 +1,11 @@
+{
+    "presets": {
+        "default": {
+            "id": "default",
+            "name": "Last 30 Days",
+            "description": "Default time range of last 30 days",
+            "days_back": 30
+        }
+    },
+    "next_id": 1
+}

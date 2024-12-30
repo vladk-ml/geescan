@@ -28,16 +28,11 @@ frontend/build
 .idea/
 *.iml
 
-# dotenv environment variables file
+# Environment variables
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-frontend/.env.local
-frontend/.env.development.local
-frontend/.env.test.local
-frontend/.env.production.local
+**/.env
+backend/.env
+backend/**/.env
 
 # Optional: Docker
 docker-compose.override.yml

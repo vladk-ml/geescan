@@ -1,10 +1,15 @@
 import os
-
 from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables from .env
+# Get the absolute path to the .env file
+env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+print(f"Loading .env from: {env_path}")  # Debug print
+load_dotenv(env_path)  # Load environment variables from .env
+
+# Debug print to show loaded value
+print(f"Loaded GEE_PROJECT value: {os.getenv('GEE_PROJECT')}")
 
 def create_app():
     """

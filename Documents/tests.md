@@ -4,7 +4,6 @@
 **Endpoint**: `/api/health` (GET)
 
 ```powershell
-Write-Host "--- Testing /api/health (GET) ---"
 $uri = "http://localhost:5000/api/health"
 try {
     $response = Invoke-WebRequest -Uri $uri -Method Get
@@ -13,14 +12,12 @@ try {
 } catch {
     Write-Host "Error: $($_.Exception.Message)"
 }
-Write-Host ""
 ```
 
 ## 2. Test Create AOI
 **Endpoint**: `/api/test_create_aoi` (POST)
 
 ```powershell
-Write-Host "--- Testing /api/test_create_aoi (POST) ---"
 $uri = "http://localhost:5000/api/test_create_aoi"
 try {
     $response = Invoke-WebRequest -Uri $uri -Method Post
@@ -29,14 +26,12 @@ try {
 } catch {
     Write-Host "Error: $($_.Exception.Message)"
 }
-Write-Host ""
 ```
 
 ## 3. Test Get AOIs
 **Endpoint**: `/api/test_aois` (GET)
 
 ```powershell
-Write-Host "--- Testing /api/test_aois (GET) ---"
 $uri = "http://localhost:5000/api/test_aois"
 try {
     $response = Invoke-WebRequest -Uri $uri -Method Get
@@ -45,14 +40,12 @@ try {
 } catch {
     Write-Host "Error: $($_.Exception.Message)"
 }
-Write-Host ""
 ```
 
 ## 4. Get All AOIs
 **Endpoint**: `/api/aois` (GET)
 
 ```powershell
-Write-Host "--- Testing /api/aois (GET) ---"
 $uri = "http://localhost:5000/api/aois"
 try {
     $response = Invoke-WebRequest -Uri $uri -Method Get
@@ -61,14 +54,12 @@ try {
 } catch {
     Write-Host "Error: $($_.Exception.Message)"
 }
-Write-Host ""
 ```
 
 ## 5. Create New AOI
 **Endpoint**: `/api/aois` (POST)
 
 ```powershell
-Write-Host "--- Testing /api/aois (POST) ---"
 $uri = "http://localhost:5000/api/aois"
 $body = ConvertTo-Json -Compress @{
     name = "PowerShell Created AOI"
@@ -81,7 +72,6 @@ try {
 } catch {
     Write-Host "Error: $($_.Exception.Message)"
 }
-Write-Host ""
 ```
 
 ## 6. Update Existing AOI
@@ -90,7 +80,6 @@ Write-Host ""
 Note: Replace `{id}` with the actual AOI ID you want to update.
 
 ```powershell
-Write-Host "--- Testing /api/aois/1 (PUT) ---"
 $uri = "http://localhost:5000/api/aois/1"  # Replace 1 with an actual AOI ID
 $body = ConvertTo-Json -Compress @{
     name = "PowerShell Updated AOI"
@@ -103,7 +92,6 @@ try {
 } catch {
     Write-Host "Error: $($_.Exception.Message)"
 }
-Write-Host ""
 ```
 
 ## 7. Delete Existing AOI
@@ -112,7 +100,6 @@ Write-Host ""
 Note: Replace `{id}` with the actual AOI ID you want to delete.
 
 ```powershell
-Write-Host "--- Testing /api/aois/1 (DELETE) ---"
 $uri = "http://localhost:5000/api/aois/1"  # Replace 1 with an actual AOI ID
 try {
     $response = Invoke-WebRequest -Uri $uri -Method Delete
@@ -121,7 +108,6 @@ try {
 } catch {
     Write-Host "Error: $($_.Exception.Message)"
 }
-Write-Host ""
 ```
 
 ## 8. Get Single AOI
@@ -130,7 +116,6 @@ Write-Host ""
 Note: Replace `{id}` with the actual AOI ID you want to retrieve.
 
 ```powershell
-Write-Host "--- Testing /api/aois/1 (GET) ---"
 $uri = "http://localhost:5000/api/aois/1"  # Replace 1 with an actual AOI ID
 try {
     $response = Invoke-WebRequest -Uri $uri -Method Get
@@ -139,34 +124,27 @@ try {
 } catch {
     Write-Host "Error: $($_.Exception.Message)"
 }
-Write-Host ""
 ```
 
 ## 9. GEE Authentication
 **Endpoint**: `/api/auth/gee` (POST)
 
 ```powershell
-Write-Host "--- Testing GEE Authentication (POST) ---"
 $uri = "http://localhost:5000/api/auth/gee"
-$body = @{
-    project_id = "your-project-id"  # Replace with your GEE project ID
-} | ConvertTo-Json
-
 try {
-    $response = Invoke-WebRequest -Uri $uri -Method Post -Body $body -ContentType "application/json"
+    $response = Invoke-WebRequest -Uri $uri -Method Post -ContentType "application/json"
     Write-Host "Status Code: $($response.StatusCode)"
     Write-Host "Content: $($response.Content)"
 } catch {
     Write-Host "Error: $($_.Exception.Message)"
+    Write-Host "Response: $($_.ErrorDetails.Message)"
 }
-Write-Host ""
 ```
 
 ## 10. Export AOI to GeoTIFF
 **Endpoint**: `/api/aois/{aoi_id}/export` (POST)
 
 ```powershell
-Write-Host "--- Testing AOI Export (POST) ---"
 $aoi_id = 1  # Replace with actual AOI ID
 $uri = "http://localhost:5000/api/aois/$aoi_id/export"
 $body = @{
@@ -184,7 +162,6 @@ try {
     
     # Check task status
     if ($task_id) {
-        Write-Host "Checking task status..."
         $status_uri = "http://localhost:5000/api/export/status/$task_id"
         $status_response = Invoke-WebRequest -Uri $status_uri -Method Get
         Write-Host "Task Status: $($status_response.Content)"
@@ -192,14 +169,12 @@ try {
 } catch {
     Write-Host "Error: $($_.Exception.Message)"
 }
-Write-Host ""
 ```
 
 ## 11. Check Export Task Status
 **Endpoint**: `/api/export/status/{task_id}` (GET)
 
 ```powershell
-Write-Host "--- Testing Export Status Check (GET) ---"
 $task_id = "your-task-id"  # Replace with actual task ID from export response
 $uri = "http://localhost:5000/api/export/status/$task_id"
 
@@ -210,7 +185,6 @@ try {
 } catch {
     Write-Host "Error: $($_.Exception.Message)"
 }
-Write-Host ""
 ```
 
 Explanation of Each Test:
@@ -276,8 +250,6 @@ Expects a status code of 200 and a JSON response containing the details of the r
 /api/auth/gee (POST):
 
 Sends a POST request to authenticate with Google Earth Engine.
-
-Includes a JSON body with the project ID.
 
 Expects a status code of 200 and a JSON response confirming authentication.
 
