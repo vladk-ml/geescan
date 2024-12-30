@@ -1,33 +1,41 @@
 import ee
 import os
 import json
+import time
 from app.models.db import get_aoi
 from flask import current_app
 from datetime import datetime, timedelta
 
-def initialize_gee():
-    """Initialize Google Earth Engine using service account"""
-    try:
-        # Get paths from environment
-        project_id = os.getenv('GEE_PROJECT')
-        credentials_path = os.getenv('GEE_SERVICE_ACCOUNT_KEY')
+def initialize_gee(max_retries=3, delay=1):
+    """Initialize Google Earth Engine using service account with retry logic"""
+    for attempt in range(max_retries):
+        try:
+            # Get paths from environment
+            project_id = os.getenv('GEE_PROJECT')
+            credentials_path = os.getenv('GEE_SERVICE_ACCOUNT_KEY')
 
-        if not project_id:
-            return {"status": "error", "message": "GEE_PROJECT environment variable not set"}
-        if not credentials_path:
-            return {"status": "error", "message": "GEE_SERVICE_ACCOUNT_KEY environment variable not set"}
-        if not os.path.exists(credentials_path):
-            return {"status": "error", "message": f"Service account key file not found at: {credentials_path}"}
+            if not project_id:
+                return {"status": "error", "message": "GEE_PROJECT environment variable not set"}
+            if not credentials_path:
+                return {"status": "error", "message": "GEE_SERVICE_ACCOUNT_KEY environment variable not set"}
+            if not os.path.exists(credentials_path):
+                return {"status": "error", "message": f"Service account key file not found at: {credentials_path}"}
 
-        # Initialize with service account
-        credentials = ee.ServiceAccountCredentials(
-            email=None,  # Will be read from the key file
-            key_file=credentials_path
-        )
-        ee.Initialize(credentials=credentials, project=project_id)
-        return {"status": "success", "message": "Authentication successful"}
-    except Exception as e:
-        return {"status": "error", "message": f"Authentication failed: {str(e)}"}
+            # Initialize with service account
+            credentials = ee.ServiceAccountCredentials(
+                email=None,  # Will be read from the key file
+                key_file=credentials_path
+            )
+            ee.Initialize(credentials=credentials, project=project_id)
+            
+            # Simple connection test - if this succeeds, we're connected
+            ee.Number(1).getInfo()
+            
+            return {"status": "success", "message": "Connected to Google Earth Engine successfully"}
+        except Exception as e:
+            if attempt == max_retries - 1:  # Last attempt
+                return {"status": "error", "message": f"Authentication failed after {max_retries} attempts: {str(e)}"}
+            time.sleep(delay * (attempt + 1))  # Exponential backoff
 
 def get_time_range(preset_id=None):
     """Get time range based on preset ID or default"""

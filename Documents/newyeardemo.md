@@ -1,47 +1,30 @@
 # GEEScan API Testing Commands
 
-## Test GEE Authentication
+## Initialize GEE Authentication
 ```powershell
-Invoke-RestMethod -Uri 'http://localhost:5000/api/test' -Method GET | ConvertTo-Json -Depth 10
+Invoke-RestMethod -Uri 'http://localhost:5000/api/auth/gee' -Method POST | ConvertTo-Json -Depth 10
 ```
 Output:
 ```json
 {
-    "gee_init": {
-        "message": "Authentication successful",
-        "status": "success"
-    },
-    "message": "GEE connection successful",
     "status": "success",
-    "test_image_info": {
-        "bands": [
-            {
-                "crs": "EPSG:4326",
-                "crs_transform": [
-                    0.0002777777777777778,
-                    0,
-                    -180.0001388888889,
-                    0,
-                    -0.0002777777777777778,
-                    60.00013888888889
-                ],
-                "data_type": {
-                    "max": 32767,
-                    "min": -32768,
-                    "precision": "int",
-                    "type": "PixelType"
-                },
-                "dimensions": [
-                    1296001,
-                    417601
-                ],
-                "id": "elevation"
-            }
-        ],
-        "id": "USGS/SRTMGL1_003",
-        "type": "Image",
-        "version": 1641990767055141
-    }
+    "message": "Authentication successful",
+    "initialized_at": "2024-12-30T03:01:52-08:00",
+    "init_count": 1
+}
+```
+
+## Check GEE Status
+```powershell
+Invoke-RestMethod -Uri 'http://localhost:5000/api/auth/gee/status' -Method GET | ConvertTo-Json -Depth 10
+```
+Output:
+```json
+{
+    "status": "success",
+    "initialized": true,
+    "last_init_time": "2024-12-30T03:01:52-08:00",
+    "init_count": 1
 }
 ```
 

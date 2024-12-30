@@ -5,8 +5,30 @@ import os
 import json
 from flask import current_app
 import ee
+from datetime import datetime
+from functools import wraps
 
 api_bp = Blueprint('api', __name__)
+
+# Global state tracker for GEE initialization
+gee_state = {
+    'initialized': False,
+    'last_init_time': None,
+    'init_count': 0
+}
+
+def ensure_gee_initialized(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not gee_state['initialized']:
+            result = initialize_gee()
+            if result['status'] != 'success':
+                return jsonify(result), 500
+            gee_state['initialized'] = True
+            gee_state['last_init_time'] = datetime.now()
+            gee_state['init_count'] += 1
+        return f(*args, **kwargs)
+    return decorated_function
 
 @api_bp.route('/health', methods=['GET'])
 def health_check():
@@ -107,14 +129,36 @@ def get_single_aoi(aoi_id):
 
 @api_bp.route('/auth/gee', methods=['POST'])
 def authenticate_gee():
-    """Initialize GEE authentication"""
+    """Initialize GEE authentication and return detailed status"""
     try:
         result = initialize_gee()
+        if result['status'] == 'success':
+            gee_state['initialized'] = True
+            gee_state['last_init_time'] = datetime.now()
+            gee_state['init_count'] += 1
+            
+            # Add state information to response
+            result.update({
+                'initialized_at': gee_state['last_init_time'].isoformat(),
+                'init_count': gee_state['init_count']
+            })
+        
         return jsonify(result), 200 if result['status'] == 'success' else 500
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@api_bp.route('/auth/gee/status', methods=['GET'])
+def get_gee_status():
+    """Get current GEE authentication status"""
+    return jsonify({
+        'status': 'success',
+        'initialized': gee_state['initialized'],
+        'last_init_time': gee_state['last_init_time'].isoformat() if gee_state['last_init_time'] else None,
+        'init_count': gee_state['init_count']
+    }), 200
+
 @api_bp.route('/aois/<int:aoi_id>/export', methods=['POST'])
+@ensure_gee_initialized
 def export_aoi(aoi_id):
     """Start GEE export task for an AOI"""
     try:
@@ -132,6 +176,7 @@ def export_aoi(aoi_id):
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @api_bp.route('/export/status/<task_id>', methods=['GET'])
+@ensure_gee_initialized
 def get_export_status(task_id):
     """Check status of an export task"""
     result = check_task_status(task_id)
@@ -241,21 +286,23 @@ def delete_time_preset(preset_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @api_bp.route('/test', methods=['GET'])
+@ensure_gee_initialized
 def test():
-    """Test endpoint to verify GEE connection"""
+    """Legacy test endpoint - use /auth/gee for authentication and /auth/gee/status for status checks"""
     try:
-        result = initialize_gee()
-        if result['status'] == 'success':
-            # Try a simple GEE operation
-            image = ee.Image('USGS/SRTMGL1_003')
-            info = image.getInfo()
-            return jsonify({
-                "status": "success",
-                "message": "GEE connection successful",
-                "gee_init": result,
-                "test_image_info": info
-            })
-        return jsonify(result), 500
+        # Get basic GEE info without re-authenticating
+        image = ee.Image('USGS/SRTMGL1_003')
+        info = image.getInfo()
+        return jsonify({
+            "status": "success",
+            "message": "GEE connection successful",
+            "gee_status": {
+                "initialized": gee_state['initialized'],
+                "last_init_time": gee_state['last_init_time'].isoformat() if gee_state['last_init_time'] else None,
+                "init_count": gee_state['init_count']
+            },
+            "test_image_info": info
+        })
     except Exception as e:
         return jsonify({
             "status": "error",
