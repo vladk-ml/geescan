@@ -6,13 +6,25 @@ from flask import current_app
 from datetime import datetime, timedelta
 
 def initialize_gee():
-    """Initialize Google Earth Engine using environment variables"""
+    """Initialize Google Earth Engine using service account"""
     try:
+        # Get paths from environment
         project_id = os.getenv('GEE_PROJECT')
+        credentials_path = os.getenv('GEE_SERVICE_ACCOUNT_KEY')
+
         if not project_id:
             return {"status": "error", "message": "GEE_PROJECT environment variable not set"}
+        if not credentials_path:
+            return {"status": "error", "message": "GEE_SERVICE_ACCOUNT_KEY environment variable not set"}
+        if not os.path.exists(credentials_path):
+            return {"status": "error", "message": f"Service account key file not found at: {credentials_path}"}
 
-        ee.Initialize(project=project_id)
+        # Initialize with service account
+        credentials = ee.ServiceAccountCredentials(
+            email=None,  # Will be read from the key file
+            key_file=credentials_path
+        )
+        ee.Initialize(credentials=credentials, project=project_id)
         return {"status": "success", "message": "Authentication successful"}
     except Exception as e:
         return {"status": "error", "message": f"Authentication failed: {str(e)}"}
