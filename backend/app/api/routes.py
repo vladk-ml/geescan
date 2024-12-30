@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request, send_from_directory
-from app.models.db import create_aoi, get_aois, get_aoi, update_aoi, delete_aoi
+from app.models.db import create_aoi, get_aois, get_aoi, update_aoi, delete_aoi, get_db_connection
 from app.api.gee_utils import initialize_gee, export_aoi_to_asset, check_task_status
 import os
 import json
@@ -32,7 +32,113 @@ def ensure_gee_initialized(f):
 
 @api_bp.route('/health', methods=['GET'])
 def health_check():
-    return jsonify({'status': 'healthy'}), 200
+    """Comprehensive health check of all system components"""
+    health_status = {
+        'status': 'healthy',
+        'components': {
+            'api': 'healthy',
+            'database': 'unknown',
+            'gee': 'unknown'
+        }
+    }
+    
+    # Check database
+    try:
+        conn = get_db_connection()
+        if conn is not None:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                conn.close()
+                health_status['components']['database'] = 'healthy'
+        else:
+            health_status['components']['database'] = 'unhealthy'
+    except Exception as e:
+        health_status['components']['database'] = 'unhealthy'
+    
+    # Check GEE status
+    try:
+        if gee_state['initialized']:
+            health_status['components']['gee'] = 'healthy'
+        else:
+            health_status['components']['gee'] = 'not initialized'
+    except Exception as e:
+        health_status['components']['gee'] = 'error'
+    
+    # Overall status is healthy only if all components are healthy
+    if any(status != 'healthy' for status in health_status['components'].values()):
+        health_status['status'] = 'degraded'
+    
+    return jsonify(health_status), 200
+
+@api_bp.route('/health/api', methods=['GET'])
+def api_health_check():
+    """Check API health and basic functionality"""
+    try:
+        # Get basic system info
+        api_info = {
+            'status': 'healthy',
+            'service': 'api',
+            'version': '1.0.0',  # We should track this somewhere
+            'uptime': datetime.now().isoformat(),
+            'endpoints': {
+                'total': len([rule for rule in current_app.url_map.iter_rules()]),
+                'active': True
+            }
+        }
+        return jsonify(api_info), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'service': 'api',
+            'message': str(e)
+        }), 500
+
+@api_bp.route('/health/db', methods=['GET'])
+def db_health_check():
+    """Check database connection health"""
+    try:
+        conn = get_db_connection()
+        if conn is not None:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                conn.close()
+                return jsonify({
+                    'status': 'healthy',
+                    'service': 'database'
+                }), 200
+        return jsonify({
+            'status': 'unhealthy',
+            'service': 'database',
+            'message': 'Could not establish connection'
+        }), 500
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'service': 'database',
+            'message': str(e)
+        }), 500
+
+@api_bp.route('/health/gee', methods=['GET'])
+def gee_health_check():
+    """Check GEE service health"""
+    try:
+        if gee_state['initialized']:
+            return jsonify({
+                'status': 'healthy',
+                'service': 'gee',
+                'last_init': gee_state['last_init_time'].isoformat() if gee_state['last_init_time'] else None,
+                'init_count': gee_state['init_count']
+            }), 200
+        return jsonify({
+            'status': 'not initialized',
+            'service': 'gee'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'service': 'gee',
+            'message': str(e)
+        }), 500
 
 @api_bp.route('/test_create_aoi', methods=['POST'])
 def test_create_aoi():
@@ -208,6 +314,20 @@ def get_export_status(task_id):
     """Check status of an export task"""
     result = check_task_status(task_id)
     return jsonify(result), 200 if result['status'] == 'success' else 500
+
+@api_bp.route('/auth/db/status', methods=['GET'])
+def check_db_status():
+    """Check database connection status"""
+    try:
+        conn = get_db_connection()
+        if conn is not None:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")  # Simple query to test connection
+                conn.close()
+                return jsonify({'status': 'connected', 'message': 'Database connection successful'}), 200
+        return jsonify({'status': 'error', 'message': 'Could not establish database connection'}), 500
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Database error: {str(e)}'}), 500
 
 @api_bp.route('/preferences', methods=['GET', 'POST'])
 def handle_preferences():

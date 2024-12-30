@@ -45,27 +45,64 @@
             background-color: #f9f9f9;
             border-radius: 4px;
         }
+        .button-description {
+            font-size: 0.9em;
+            color: #666;
+            margin: 5px 0;
+            padding-left: 10px;
+        }
+        .button-group {
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
     <h1>GEEScan Dev Dashboard</h1>
     
     <div class="section">
-        <h2>Authentication</h2>
-        <button onclick="initGEE()">Initialize GEE</button>
-        <button onclick="checkGEEStatus()">Check Status</button>
+        <h2>System Status</h2>
+        <div class="button-group">
+            <button onclick="checkHealth()">Check All Health</button>
+            <div class="button-description">GET /api/health - Combined health check of all system components</div>
+        </div>
+        <div class="button-group">
+            <button onclick="checkAPIHealth()">Check API Health</button>
+            <div class="button-description">GET /api/health/api - Tests API server status</div>
+        </div>
+        <div class="button-group">
+            <button onclick="checkDBHealth()">Check Database Health</button>
+            <div class="button-description">GET /api/health/db - Tests PostgreSQL database connection</div>
+        </div>
+        <div class="button-group">
+            <button onclick="checkGEEHealth()">Check GEE Health</button>
+            <div class="button-description">GET /api/health/gee - Tests GEE service status</div>
+        </div>
+        <div class="button-group">
+            <button onclick="initGEE()">Initialize GEE</button>
+            <div class="button-description">POST /api/auth/gee - Initializes Google Earth Engine authentication</div>
+        </div>
+        <div class="button-group">
+            <button onclick="checkGEEStatus()">Check GEE Status</button>
+            <div class="button-description">GET /api/auth/gee/status - Verifies GEE authentication status</div>
+        </div>
     </div>
 
     <div class="section">
         <h2>AOI Management</h2>
-        <button onclick="listAOIs()">List All AOIs</button>
-        <div>
+        <div class="button-group">
+            <button onclick="listAOIs()">List All AOIs</button>
+            <div class="button-description">GET /api/aois - Retrieves all Areas of Interest</div>
+        </div>
+        <div class="button-group">
             <input type="number" id="aoiId" placeholder="AOI ID">
             <button onclick="getAOI()">Get AOI</button>
+            <div class="button-description">GET /api/aois/{id} - Retrieves a specific AOI by ID</div>
             <button onclick="deleteAOI()">Delete AOI</button>
+            <div class="button-description">DELETE /api/aois/{id} - Removes an AOI by ID</div>
         </div>
         <div>
             <h3>Create New AOI</h3>
+            <div class="button-description">POST /api/aois - Creates a new Area of Interest</div>
             <select id="presetArea" onchange="updateGeometry()">
                 <option value="">Select Area</option>
                 <option value="manhattan">Manhattan Downtown</option>
@@ -83,15 +120,17 @@
 
     <div class="section">
         <h2>Export Management</h2>
-        <div>
+        <div class="button-group">
             <input type="number" id="exportAoiId" placeholder="AOI ID">
             <input type="date" id="startDate" value="2024-01-01">
             <input type="date" id="endDate" value="2024-01-30">
             <button onclick="exportAOI()">Export AOI</button>
+            <div class="button-description">POST /api/export - Starts a GEE export task for the specified AOI and date range</div>
         </div>
-        <div>
+        <div class="button-group">
             <input type="text" id="taskId" placeholder="Task ID">
             <button onclick="checkExportStatus()">Check Status</button>
+            <div class="button-description">GET /api/export/{task_id}/status - Checks the status of a GEE export task</div>
         </div>
     </div>
 
@@ -246,6 +285,30 @@
             }
             displayResult(
                 fetch(`/api/export/status/${taskId}`).then(r => r.json())
+            );
+        }
+
+        async function checkHealth() {
+            displayResult(
+                fetch('/api/health').then(r => r.json())
+            );
+        }
+
+        async function checkAPIHealth() {
+            displayResult(
+                fetch('/api/health/api').then(r => r.json())
+            );
+        }
+
+        async function checkDBHealth() {
+            displayResult(
+                fetch('/api/health/db').then(r => r.json())
+            );
+        }
+
+        async function checkGEEHealth() {
+            displayResult(
+                fetch('/api/health/gee').then(r => r.json())
             );
         }
     </script>
