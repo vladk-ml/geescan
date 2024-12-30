@@ -22,8 +22,8 @@ Ensure you have:
 
 2. Access the Dev Dashboard:
    - Open your browser
-   - Navigate to: http://localhost:5000/dev
-   
+   - Navigate to: http://localhost:5001/dev
+
 ## Verifying Everything Works
 
 1. **Check System Status**

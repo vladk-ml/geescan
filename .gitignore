@@ -69,3 +69,4 @@ frontend/yarn-error.log*
 **/gee-service-account.json
 backend/app/gee-service-account.json
 backend/app/api/__pycache__/routes.cpython-312.pyc
+backend/env
