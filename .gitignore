@@ -8,6 +8,23 @@ venv/
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 **/__pycache__/
 **/*.py[cod]
 
@@ -45,3 +62,7 @@ yarn-error.log*
 frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
+
+# GEE Service Account
+**/gee-service-account.json
+backend/app/gee-service-account.json
